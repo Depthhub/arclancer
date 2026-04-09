@@ -29,7 +29,11 @@ cat <<EOF > /root/.openclaw/openclaw.json
 {
   "gateway": {
     "mode": "local",
-    "port": 18789
+    "port": 18789,
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": ["https://arclancer-production.up.railway.app"]
+    }
   }
 }
 EOF
