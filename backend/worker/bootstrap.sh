@@ -4,8 +4,9 @@ set -e
 # ArcLancer OpenClaw Worker Bootstrap Script
 echo "[ArcLancer Worker] Bootstrapping OpenClaw workspace..."
 
-# 1. Provide a clean workspace
+# 1. Provide a clean workspace and config directory
 mkdir -p /app/workspace
+mkdir -p /root/.openclaw
 cd /app/workspace
 
 # 2. Inject API Keys securely
@@ -23,10 +24,17 @@ fi
 mkdir -p /app/workspace/plugins
 cp -r /app/plugins/arclancer-auditor /app/workspace/plugins/ 2>/dev/null || true
 
-# 4. Set Telegram UID for DM access control
-CLIENT_UID="${ARC_TELEGRAM_UID:-pairing}"
+# 4. Create required OpenClaw config so gateway will start
+cat <<EOF > /root/.openclaw/openclaw.json
+{
+  "gateway": {
+    "mode": "local",
+    "port": 18789
+  }
+}
+EOF
 
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
-# 5. Start OpenClaw gateway from the workspace directory
-exec openclaw gateway --port 18789 --verbose
+# 5. Start OpenClaw gateway (run subcommand, force to grab port, allow unconfigured channels)
+exec openclaw gateway run --port 18789 --force --allow-unconfigured --verbose
