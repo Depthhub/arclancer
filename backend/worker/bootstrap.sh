@@ -30,14 +30,13 @@ cat <<EOF > /root/.openclaw/openclaw.json
   "gateway": {
     "mode": "local",
     "port": 18789,
-    "bind": "lan",
-    "auth": "none"
-  },
-  "controlUi": {
-    "allowedOrigins": ["*"]
+    "bind": "lan"
   }
 }
 EOF
+
+# Set a known gateway token for Control UI access
+export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-arclancer-test-2026}"
 
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
