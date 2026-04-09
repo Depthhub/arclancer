@@ -1,0 +1,38 @@
+﻿≡ƒÜÇ Deploying ArcLancer to Arc Testnet...
+
+Deployer:   0x75f1E5B0D21D0c20646fFd781E3D91073fd11D82
+Balance:    20.0 ETH
+Network:    arcTestnet (chainId: 5042002)
+
+≡ƒôª Deploying EscrowFactory...
+   USDC:       0x3600000000000000000000000000000000000000
+   StableFX:   0x1f91886C7028986aD885ffCee0e40b75C9cd5aC1
+   Fee Collector: 0x75f1E5B0D21D0c20646fFd781E3D91073fd11D82
+   Admin:      0x75f1E5B0D21D0c20646fFd781E3D91073fd11D82
+   Tx hash:    0xfc5935cfd7a934594e837707dd25709fd391cf2157d7295ba9a1812554d5d086
+   Waiting for confirmation...
+Γ£à EscrowFactory deployed to: 0x0ADf70A390868c7016697edF0640791c3B3e5f31
+
+≡ƒôä Deployment saved to: ./deployments.json
+
+============================================================
+≡ƒÄë DEPLOYMENT COMPLETE!
+============================================================
+
+Contract Addresses:
+  USDC (official):     0x3600000000000000000000000000000000000000
+  StableFX (official): 0x1f91886C7028986aD885ffCee0e40b75C9cd5aC1
+  EscrowFactory:       0x0ADf70A390868c7016697edF0640791c3B3e5f31
+
+Configuration:
+  Platform Fee:  2%
+  Fee Collector:  0x75f1E5B0D21D0c20646fFd781E3D91073fd11D82
+
+============================================================
+≡ƒôï UPDATE YOUR FRONTEND .env.local:
+============================================================
+
+NEXT_PUBLIC_FACTORY_ADDRESS=0x0ADf70A390868c7016697edF0640791c3B3e5f31
+
+Explorer: https://testnet.arcscan.app/address/0x0ADf70A390868c7016697edF0640791c3B3e5f31
+============================================================

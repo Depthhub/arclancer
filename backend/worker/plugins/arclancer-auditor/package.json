@@ -1,0 +1,9 @@
+{
+  "name": "openclaw-plugin-arclancer-auditor",
+  "version": "1.0.0",
+  "description": "ArcLancer Smart Contract Auditing Skill for OpenClaw",
+  "main": "index.js",
+  "engines": {
+    "openclaw": ">=2026.4.9"
+  }
+}
