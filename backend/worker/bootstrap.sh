@@ -37,4 +37,4 @@ EOF
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
 # 5. Start OpenClaw gateway (run subcommand, force to grab port, allow unconfigured channels)
-exec openclaw gateway run --port 18789 --force --allow-unconfigured --verbose
+exec openclaw gateway run --port 18789 --allow-unconfigured --verbose
