@@ -33,6 +33,7 @@ import {
 } from "@/lib/dealCopilot/chain";
 import { runAgentLoop, handleAgentConfirmation, isAgentEnabled } from "@/lib/dealCopilot/agent";
 import { resolveApiKey, saveUserApiKey, deleteUserApiKey } from "@/lib/dealCopilot/byok";
+import { isHeavyTask, dispatchToWorker, isWorkerEnabled } from "@/lib/dealCopilot/openclawDispatch";
 import type { DealCopilotState } from "@/lib/dealCopilot/types";
 import type { JsonStore } from "@/lib/dealCopilot/storage";
 
@@ -1404,7 +1405,30 @@ export async function POST(req: Request) {
     }
 
     if (!isSlashCommand && !isActiveConversation && !isDealStart) {
-      // Route to AI agent for natural language processing
+      // Check if this is a heavy task that should go to the OpenClaw worker
+      if (isHeavyTask(trimmedText) && isWorkerEnabled()) {
+        try {
+          await telegramSendMessage({ token, chatId, reply: { text: "🦞 Dispatching to OpenClaw Worker...\n\n_Your task is being processed by a persistent AI agent with access to Foundry, Slither, and terminal tools._", parseMode: "Markdown" } });
+          const workerResponse = await dispatchToWorker(trimmedText, chatId, fromId);
+          await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
+        } catch (e) {
+          console.error("[dealCopilot] OpenClaw dispatch failed, falling back to local agent", e);
+          // Fall through to local agent on worker failure
+          const apiKey = await resolveApiKey(store, fromId);
+          if (apiKey) {
+            try {
+              const agentResult = await runAgentLoop(store, chatId, fromId, trimmedText, apiKey);
+              await telegramSendMessage({ token, chatId, reply: agentResult.reply });
+            } catch (innerErr) {
+              const msg = innerErr instanceof Error ? innerErr.message : "Unknown error";
+              await telegramSendMessage({ token, chatId, reply: { text: `⚠️ AI agent error: ${msg.slice(0, 200)}`, parseMode: "Markdown" } }).catch(() => {});
+            }
+          }
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // Route to local AI agent for light natural language processing
       const apiKey = await resolveApiKey(store, fromId);
       if (!apiKey) {
         await telegramSendMessage({ token, chatId, reply: { text: "🤖 AI agent needs an API key.\n\nRun `/setkey sk-or-v1-...` with a free key from https://openrouter.ai/keys", parseMode: "Markdown" } });
