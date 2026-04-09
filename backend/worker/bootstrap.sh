@@ -24,7 +24,7 @@ fi
 mkdir -p /app/workspace/plugins
 cp -r /app/plugins/arclancer-auditor /app/workspace/plugins/ 2>/dev/null || true
 
-# 4. Create required OpenClaw config so gateway will start
+# 4. Create required OpenClaw config with Control UI access
 cat <<EOF > /root/.openclaw/openclaw.json
 {
   "gateway": {
@@ -32,16 +32,19 @@ cat <<EOF > /root/.openclaw/openclaw.json
     "port": 18789,
     "bind": "lan",
     "controlUi": {
-      "allowedOrigins": ["https://arclancer-production.up.railway.app", "*"]
+      "allowedOrigins": ["https://arclancer-production.up.railway.app"]
     }
   }
 }
 EOF
 
-# Set a known gateway token for Control UI access
+# 5. Set gateway token for Control UI access
 export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-arclancer-test-2026}"
+
+# 6. Also set via CLI in case JSON structure differs
+openclaw config set gateway.controlUi.allowedOrigins '["https://arclancer-production.up.railway.app"]' 2>/dev/null || true
 
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
-# 5. Start OpenClaw gateway (run subcommand, force to grab port, allow unconfigured channels)
+# 7. Start OpenClaw gateway
 exec openclaw gateway run --port 18789 --allow-unconfigured --verbose
