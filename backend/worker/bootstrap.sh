@@ -47,4 +47,4 @@ openclaw config set gateway.controlUi.allowedOrigins '["https://arclancer-produc
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
 # 7. Start OpenClaw gateway
-exec openclaw gateway run --port 18789 --allow-unconfigured --verbose
+exec openclaw gateway run --port 18789 --token "$OPENCLAW_GATEWAY_TOKEN" --allow-unconfigured --verbose
