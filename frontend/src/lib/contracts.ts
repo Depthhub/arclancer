@@ -410,6 +410,16 @@ export const ERC20_ABI = [
         outputs: [{ type: 'uint8' }],
         stateMutability: 'view',
     },
+    {
+        type: 'function',
+        name: 'transfer',
+        inputs: [
+            { name: 'to', type: 'address' },
+            { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [{ type: 'bool' }],
+        stateMutability: 'nonpayable',
+    },
 ] as const;
 
 // Supported currencies for StableFX
