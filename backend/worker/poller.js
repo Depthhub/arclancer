@@ -15,6 +15,8 @@ const VERCEL_CALLBACK = process.env.VERCEL_CALLBACK_URL || "https://arclancer.ve
 const WORKER_SECRET = process.env.OPENCLAW_WORKER_SECRET || "arclancer-worker-secret-2026";
 const LLM_API_KEY = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY;
 
+console.log(`[Poller] Environment Check: OPENROUTER=${!!process.env.OPENROUTER_API_KEY}, GROQ=${!!process.env.GROQ_API_KEY}`);
+
 const SLEEP_MS = 5000;
 
 async function executeCommand(cmd) {
