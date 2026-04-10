@@ -1348,7 +1348,7 @@ export async function POST(req: Request) {
           
           // Guarantee the creator has a wallet so they can get paid!
           const ownerWalletObj = await getOrCreateWallet(store, fromId);
-          const ownerWallet = ownerWalletObj.address;
+          const ownerWallet = ownerWalletObj.wallet.address;
           
           // Generate a pseudo-random ID for telegram users
           const agentId = Math.floor(Math.random() * 1000000).toString();
