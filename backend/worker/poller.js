@@ -92,6 +92,28 @@ async function processJob(job) {
           if (meta.skills?.includes("researcher") || meta.skills?.includes("explorer")) {
              toolContext += "\n[System Tool] Agent has researcher skills enabled. Activating advanced cross-reference mode.\n";
           }
+
+          // Process Knowledge Skills (External Data/RAG) via URLs
+          if (meta.skills && Array.isArray(meta.skills)) {
+            for (const skill of meta.skills) {
+              if (skill.startsWith("http://") || skill.startsWith("https://")) {
+                try {
+                  console.log(`[Poller] Fetching Knowledge Skill from URL: ${skill}`);
+                  const docRes = await fetch(skill);
+                  if (docRes.ok) {
+                    const text = await docRes.text();
+                    // Truncate to reasonable size (e.g. 10k chars) to prevent huge context bloat
+                    const safeText = text.slice(0, 15000);
+                    toolContext += `\n========== KNOWLEDGE SOURCE =================\nLink: ${skill}\nContent snippet:\n${safeText}\n==============================================\n`;
+                    console.log(`[Poller] Successfully injected ${safeText.length} chars of knowledge from ${skill}`);
+                  }
+                } catch (e) {
+                  toolContext += `\n[Warning] Failed to fetch Knowledge Skill from ${skill}: ${e.message}\n`;
+                  console.error(`[Poller] Fetch error for skill ${skill}`, e);
+                }
+              }
+            }
+          }
         }
       } catch (e) {
         console.error("[Poller] Could not fetch specific agent meta", e);

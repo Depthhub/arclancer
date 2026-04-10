@@ -1339,7 +1339,10 @@ export async function POST(req: Request) {
           }
 
           const [agentName, skillsStr, systemPrompt] = parts;
-          const skills = skillsStr.split(",").map(s => s.trim().toLowerCase());
+          const skills = skillsStr.split(",").map(s => {
+            const trimmed = s.trim();
+            return trimmed.toLowerCase().startsWith("http") ? trimmed : trimmed.toLowerCase();
+          });
           
           // Generate a pseudo-random ID for telegram users
           const agentId = Math.floor(Math.random() * 1000000);
