@@ -134,6 +134,40 @@ async function approveUSDC(
 }
 
 /* ------------------------------------------------------------------ */
+/* Direct Transfers                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function executeUsdcTransfer(
+    privateKey: `0x${string}`,
+    to: string,
+    amountUsdc: number
+): Promise<TxResult> {
+    try {
+        const wallet = getWalletClient(privateKey);
+        const publicClient = getPublicClient();
+        const amount = BigInt(Math.floor(amountUsdc * 1e6));
+
+        const { request } = await publicClient.simulateContract({
+            account: wallet.account,
+            address: CONTRACTS.USDC,
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [to as Address, amount],
+        });
+
+        const hash = await wallet.writeContract(request);
+        return {
+            success: true,
+            hash,
+            explorerUrl: explorerTxUrl(hash),
+        };
+    } catch (e) {
+        console.error("executeUsdcTransfer error:", e);
+        return { success: false, error: e instanceof Error ? e.message : "Unknown error" };
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Create Escrow Contract                                              */
 /* ------------------------------------------------------------------ */
 

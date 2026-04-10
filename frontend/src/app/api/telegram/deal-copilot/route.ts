@@ -25,6 +25,7 @@ import {
   initiateDispute,
   cancelContract,
   deployAgent,
+  executeUsdcTransfer,
 } from "@/lib/dealCopilot/executor";
 import {
   fetchContractDetails,
@@ -1326,33 +1327,39 @@ export async function POST(req: Request) {
     if (/^\/createagent\b/i.test(trimmedText)) {
       after(async () => {
         try {
-          // Format expected: /createagent <AgentName> | <skills,comma,separated> | <Custom System Prompt>
+          // Format expected: /createagent <AgentName> | <skills,comma,separated> | <Custom System Prompt> | <PriceInUSDC>
           const parts = trimmedText.replace(/^\/createagent\s*/i, "").split("|").map(s => s.trim());
           if (parts.length < 3) {
             await telegramSendMessage({
               token, chatId, reply: {
-                text: "❌ **Invalid Format**\n\nPlease use exactly this format:\n`/createagent AgentName | skill1,skill2 | Your custom instructions`\n\n_Example:_\n`/createagent DeFiAuditor | auditor, researcher | You are a DeFi expert`",
+                text: "❌ **Invalid Format**\n\nPlease use exactly this format:\n`/createagent AgentName | skill1,skill2 | Your custom instructions | [Optional Price]`\n\n_Example:_\n`/createagent DeFiAuditor | auditor, researcher | You are a DeFi expert | 5`",
                 parseMode: "Markdown"
               }
             });
             return;
           }
 
-          const [agentName, skillsStr, systemPrompt] = parts;
+          const [agentName, skillsStr, systemPrompt, priceStr] = parts;
           const skills = skillsStr.split(",").map(s => {
             const trimmed = s.trim();
             return trimmed.toLowerCase().startsWith("http") ? trimmed : trimmed.toLowerCase();
           });
+          const price = parseFloat(priceStr || "0") || 0;
+          
+          // Guarantee the creator has a wallet so they can get paid!
+          const ownerWalletObj = await getOrCreateWallet(store, fromId);
+          const ownerWallet = ownerWalletObj.address;
           
           // Generate a pseudo-random ID for telegram users
-          const agentId = Math.floor(Math.random() * 1000000);
+          const agentId = Math.floor(Math.random() * 1000000).toString();
           
           const brainData = {
             name: agentName,
             systemPrompt,
             skills,
+            price,
             creatorId: fromId,
-            ownerWallet: "telegram-user",
+            ownerWallet,
             createdAt: Date.now()
           };
 
@@ -1360,7 +1367,7 @@ export async function POST(req: Request) {
           
           await telegramSendMessage({
             token, chatId, reply: {
-              text: `✅ **Agent Created: ${agentName}**\n\n🆔 **Agent ID**: \`${agentId}\`\n🧠 **Skills**: ${skills.join(", ")}\n\n_You can now assign tasks to this agent!_`,
+              text: `✅ **Agent Created: ${agentName}**\n\n🆔 **Agent ID**: \`${agentId}\`\n🧠 **Skills**: ${skills.join(", ")}\n💰 **Price**: ${price} USDC\n\n_You can now assign tasks or share this Agent ID so others can use it!_`,
               parseMode: "Markdown"
             }
           });
@@ -1466,11 +1473,62 @@ export async function POST(req: Request) {
           return NextResponse.json({ ok: true });
         }
 
+        const price = meta.price || 0;
+        // If agent costs money and caller is not the creator, trigger Paywall
+        if (price > 0 && meta.creatorId !== fromId) {
+           await store.setJSON(`agent_pending_payment:${fromId}`, {
+             agentId,
+             taskText,
+             price,
+             ownerWallet: meta.ownerWallet
+           }, 3600); // Expiries in 1 hr
+
+           await telegramSendMessage({ token, chatId, reply: { 
+             text: `🛑 **Paywall Activated**\n\nThe agent **${meta.name}** costs **${price} USDC** per execution.\n\nPlease reply with \`/pay\` to automatically deduct this from your Copilot wallet and start the job.`, 
+             parseMode: "Markdown" 
+           } });
+           return NextResponse.json({ ok: true });
+        }
+
         await telegramSendMessage({ token, chatId, reply: { text: `🤖 **Dispatching to ${meta.name || "Custom Agent"}**...\n\n_Agent is booting up its skills to process your task._`, parseMode: "Markdown" } });
         const workerResponse = await dispatchToWorker(taskText, chatId, fromId, store, agentId);
         await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
       } catch (e) {
         console.error("[dealCopilot] specific agent dispatch failed", e);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (/^\/pay\b/i.test(trimmedText)) {
+      try {
+        const pendingPayment = await store.getJSON<any>(`agent_pending_payment:${fromId}`);
+        if (!pendingPayment) {
+           await telegramSendMessage({ token, chatId, reply: { text: `❌ No pending agent payments found.` } });
+           return NextResponse.json({ ok: true });
+        }
+
+        const { agentId, taskText, price, ownerWallet } = pendingPayment;
+        const wallet = await getWallet(store, fromId);
+        if (!wallet) {
+           await telegramSendMessage({ token, chatId, reply: { text: `❌ You do not have a wallet to pay with. Please type /wallet first.` } });
+           return NextResponse.json({ ok: true });
+        }
+
+        await telegramSendMessage({ token, chatId, reply: { text: `⏳ Processing payment of ${price} USDC to the Agent Creator...` } });
+
+        const pk = getPrivateKey(wallet, fromId);
+        const txRes = await executeUsdcTransfer(pk, ownerWallet, price);
+
+        if (txRes.success) {
+           await store.del(`agent_pending_payment:${fromId}`);
+           await telegramSendMessage({ token, chatId, reply: { text: `✅ **Payment Successful!**\n\n🤖 **Dispatching Agent**...`, parseMode: "Markdown" } });
+           const workerResponse = await dispatchToWorker(taskText, chatId, fromId, store, agentId);
+           await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
+        } else {
+           await telegramSendMessage({ token, chatId, reply: { text: `❌ **Payment Failed**\n\nError: ${txRes.error}\n\nPlease check your USDC balance using /status.`, parseMode: "Markdown" } });
+        }
+      } catch (e) {
+        console.error("[dealCopilot] pay failed", e);
       }
       return NextResponse.json({ ok: true });
     }
