@@ -30,6 +30,7 @@ COPY bootstrap.sh /app/bootstrap.sh
 RUN chmod +x /app/bootstrap.sh
 
 COPY plugins /app/plugins
+COPY poller.js /app/poller.js
 
 # The bootstrap script will inject secure API keys and drop into the OpenClaw startup process
 ENTRYPOINT ["/app/bootstrap.sh"]

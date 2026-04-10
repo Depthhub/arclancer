@@ -8,7 +8,6 @@
  * 4. Posts the final result back to Vercel/Telegram.
  */
 import { exec } from "child_process";
-import fetch from "node-fetch"; // Assumes Node 18+ global fetch or we'll polyfill
 
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || "https://inviting-mink-70031.upstash.io";
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "gQAAAAAAARGPAAIncDE4ZWI3ZGQwNGU0MDA0ZTg3OTVlZDE3OWQxMDIxMmYzY3AxNzAwMzE";
