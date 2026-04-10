@@ -230,7 +230,8 @@ export function getJsonStore(): JsonStore {
     return {
       async getJSON() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
       async setJSON() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
-      async del() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); }
+      async del() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
+      async rpush() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); }
     };
   }
 
