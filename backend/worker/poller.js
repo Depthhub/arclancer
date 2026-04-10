@@ -31,7 +31,7 @@ async function executeCommand(cmd) {
   });
 }
 
-async function callLLM(prompt) {
+async function callLLM(prompt, systemPrompt) {
   if (!LLM_API_KEY) throw new Error("No LLM API Key available for analysis.");
   const isGroq = LLM_API_KEY.startsWith("gsk_");
   const endpoint = isGroq ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
@@ -46,7 +46,7 @@ async function callLLM(prompt) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: "You are an expert CertiQ smart contract auditor running inside a secure container. Read the user's task and any tool outputs, then produce a professional, formatted Markdown audit report." },
+        { role: "system", content: systemPrompt },
         { role: "user", content: prompt }
       ],
       max_tokens: 3000
@@ -77,10 +77,31 @@ async function processJob(job) {
       toolContext += `[Slither] ${slitherRes.stdout.trim() || slitherRes.stderr}\n\n`;
     }
 
+    // Fetch dynamic agent brain
+    let systemPrompt = "You are an expert CertiQ smart contract auditor running inside a secure container. Read the user's task and any tool outputs, then produce a professional, formatted Markdown audit report.";
+    if (job.agentId) {
+      try {
+        const metaRes = await fetch(`${REDIS_URL}/get/${encodeURIComponent("agent_meta:" + job.agentId)}`, {
+          headers: { "Authorization": `Bearer ${REDIS_TOKEN}` }
+        });
+        const metaData = await metaRes.json();
+        if (metaData && metaData.result) {
+          const meta = typeof metaData.result === 'string' ? JSON.parse(metaData.result) : metaData.result;
+          systemPrompt = `Agent Name: ${meta.name}\nSkills: ${meta.skills?.join(", ")}\n\nInstructions:\n${meta.systemPrompt}`;
+          
+          if (meta.skills?.includes("researcher") || meta.skills?.includes("explorer")) {
+             toolContext += "\n[System Tool] Agent has researcher skills enabled. Activating advanced cross-reference mode.\n";
+          }
+        }
+      } catch (e) {
+        console.error("[Poller] Could not fetch specific agent meta", e);
+      }
+    }
+
     // Call LLM
     console.log(`[Poller] Generating response using LLM...`);
-    const prompt = `Task: ${job.userText}\n\n${toolContext}\n\nPlease generate a response. If a specific contract was provided, audit it. Otherwise, explain what you would do.`;
-    finalReport = await callLLM(prompt);
+    const prompt = `Task: ${job.userText}\n\n${toolContext}\n\nPlease generate a response based on your agent skills and the context provided.`;
+    finalReport = await callLLM(prompt, systemPrompt);
 
   } catch (e) {
     console.error(`[Poller] Job failed:`, e);

@@ -64,7 +64,8 @@ export async function dispatchToWorker(
   userText: string,
   chatId: string,
   fromId: number,
-  store: import('./storage').JsonStore
+  store: import('./storage').JsonStore,
+  agentId?: string
 ): Promise<string> {
   if (!OPENCLAW_WORKER_URL) {
     throw new Error("OPENCLAW_WORKER_URL not configured");
@@ -86,6 +87,7 @@ export async function dispatchToWorker(
     chatId,
     fromId,
     userText,
+    agentId,
     status: "pending",
     timestamp: Date.now()
   });

@@ -1322,6 +1322,53 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ ok: true });
     }
+
+    if (/^\/createagent\b/i.test(trimmedText)) {
+      after(async () => {
+        try {
+          // Format expected: /createagent <AgentName> | <skills,comma,separated> | <Custom System Prompt>
+          const parts = trimmedText.replace(/^\/createagent\s*/i, "").split("|").map(s => s.trim());
+          if (parts.length < 3) {
+            await telegramSendMessage({
+              token, chatId, reply: {
+                text: "❌ **Invalid Format**\n\nPlease use exactly this format:\n`/createagent AgentName | skill1,skill2 | Your custom instructions`\n\n_Example:_\n`/createagent DeFiAuditor | auditor, researcher | You are a DeFi expert`",
+                parseMode: "Markdown"
+              }
+            });
+            return;
+          }
+
+          const [agentName, skillsStr, systemPrompt] = parts;
+          const skills = skillsStr.split(",").map(s => s.trim().toLowerCase());
+          
+          // Generate a pseudo-random ID for telegram users
+          const agentId = Math.floor(Math.random() * 1000000);
+          
+          const brainData = {
+            name: agentName,
+            systemPrompt,
+            skills,
+            creatorId: fromId,
+            ownerWallet: "telegram-user",
+            createdAt: Date.now()
+          };
+
+          await store.setJSON(`agent_meta:${agentId}`, brainData, 60 * 60 * 24 * 365); // 1 year TTL
+          
+          await telegramSendMessage({
+            token, chatId, reply: {
+              text: `✅ **Agent Created: ${agentName}**\n\n🆔 **Agent ID**: \`${agentId}\`\n🧠 **Skills**: ${skills.join(", ")}\n\n_You can now assign tasks to this agent!_`,
+              parseMode: "Markdown"
+            }
+          });
+        } catch (e) { 
+          console.error("[dealCopilot] /createagent failed", e);
+          const msg = e instanceof Error ? e.message : "Unknown error";
+          await telegramSendMessage({ token, chatId, reply: { text: `❌ Agent creation failed: ${msg.slice(0, 200)}` } }).catch(() => { });
+        }
+      });
+      return NextResponse.json({ ok: true });
+    }
     if (/^\/mycontracts\b/i.test(trimmedText)) {
       after(async () => {
         try {
@@ -1401,6 +1448,27 @@ export async function POST(req: Request) {
     if (normalized === "debug agent") {
       const dbg = `**Debug Agent**\n\n- GroqKey length: ${process.env.GROQ_API_KEY?.length || 0}\n- isSlashCmd: ${isSlashCommand}\n- isActiveConv: ${isActiveConversation}\n- State: ${state ? state.stage : 'null'}\n- isDealStart: ${isDealStart}\n- isAgentEnabled(): ${isAgentEnabled()}`;
       await telegramSendMessage({ token, chatId, reply: { text: dbg, parseMode: "Markdown" } });
+      return NextResponse.json({ ok: true });
+    }
+
+    // User explicitly invoking a custom agent
+    const agentMatch = trimmedText.match(/^\/agent\s+(\d+)\s+(.*)/i);
+    if (agentMatch && isWorkerEnabled()) {
+      try {
+        const agentId = agentMatch[1];
+        const taskText = agentMatch[2];
+        const meta = await store.getJSON<any>(`agent_meta:${agentId}`);
+        if (!meta) {
+          await telegramSendMessage({ token, chatId, reply: { text: `❌ **Agent ${agentId} not found**`, parseMode: "Markdown" } });
+          return NextResponse.json({ ok: true });
+        }
+
+        await telegramSendMessage({ token, chatId, reply: { text: `🤖 **Dispatching to ${meta.name || "Custom Agent"}**...\n\n_Agent is booting up its skills to process your task._`, parseMode: "Markdown" } });
+        const workerResponse = await dispatchToWorker(taskText, chatId, fromId, store, agentId);
+        await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
+      } catch (e) {
+        console.error("[dealCopilot] specific agent dispatch failed", e);
+      }
       return NextResponse.json({ ok: true });
     }
 
