@@ -98,6 +98,14 @@ async function processJob(job) {
             for (const skill of meta.skills) {
               if (skill.startsWith("http://") || skill.startsWith("https://")) {
                 try {
+                  // SSRF Protection: Deny local, zero, and AWS/Railway metadata IP addresses
+                  const urlObj = new URL(skill);
+                  const hostname = urlObj.hostname;
+                  const FORBIDDEN_IPS = ["127.0.0.1", "localhost", "0.0.0.0", "169.254.169.254", "::1", "metadata.google.internal"];
+                  if (FORBIDDEN_IPS.includes(hostname) || hostname.startsWith("10.") || hostname.startsWith("192.168.") || hostname.startsWith("172.")) {
+                     throw new Error("SSRF Protection activated. URL domain is forbidden.");
+                  }
+
                   console.log(`[Poller] Fetching Knowledge Skill from URL: ${skill}`);
                   const docRes = await fetch(skill);
                   if (docRes.ok) {
