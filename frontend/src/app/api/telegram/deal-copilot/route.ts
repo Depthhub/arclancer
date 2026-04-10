@@ -1409,7 +1409,7 @@ export async function POST(req: Request) {
       if (isHeavyTask(trimmedText) && isWorkerEnabled()) {
         try {
           await telegramSendMessage({ token, chatId, reply: { text: "🦞 Dispatching to OpenClaw Worker...\n\n_Your task is being processed by a persistent AI agent with access to Foundry, Slither, and terminal tools._", parseMode: "Markdown" } });
-          const workerResponse = await dispatchToWorker(trimmedText, chatId, fromId);
+          const workerResponse = await dispatchToWorker(trimmedText, chatId, fromId, store);
           await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
         } catch (e) {
           console.error("[dealCopilot] OpenClaw dispatch failed, falling back to local agent", e);

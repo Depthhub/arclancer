@@ -63,7 +63,8 @@ export async function isWorkerHealthy(): Promise<boolean> {
 export async function dispatchToWorker(
   userText: string,
   chatId: string,
-  fromId: number
+  fromId: number,
+  store: import('./storage').JsonStore
 ): Promise<string> {
   if (!OPENCLAW_WORKER_URL) {
     throw new Error("OPENCLAW_WORKER_URL not configured");
@@ -77,8 +78,17 @@ export async function dispatchToWorker(
     throw new Error("OpenClaw worker is not responding. It may be restarting.");
   }
 
-  // 2. Log the task for visibility
-  console.log(`[openclaw-dispatch] Worker is healthy. Task from chat ${chatId}: "${userText.slice(0, 100)}"`);
+  // 2. Log and push the task to the Upstash Redis Job Queue
+  console.log(`[openclaw-dispatch] Worker is healthy. Queuing task from chat ${chatId}: "${userText.slice(0, 100)}"`);
+
+  await store.rpush("arclancer:jobs", {
+    id: Date.now().toString(),
+    chatId,
+    fromId,
+    userText,
+    status: "pending",
+    timestamp: Date.now()
+  });
 
   // 3. Return acknowledgment — the OpenClaw gateway processes tasks
   //    asynchronously via its persistent daemon and channel bindings

@@ -44,6 +44,9 @@ export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-arclancer-test-2026}"
 # 6. Also set via CLI in case JSON structure differs
 openclaw config set gateway.controlUi.allowedOrigins '["https://arclancer-production.up.railway.app"]' 2>/dev/null || true
 
+echo "[ArcLancer Worker] Starting Async Job Poller..."
+node /app/poller.js &
+
 echo "[ArcLancer Worker] Configuration complete. Starting OpenClaw Gateway daemon..."
 
 # 7. Start OpenClaw gateway

@@ -5,6 +5,7 @@ export interface JsonStore {
   getJSON<T>(key: string): Promise<T | null>;
   setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void>;
   del(key: string): Promise<void>;
+  rpush(key: string, value: unknown): Promise<void>;
 }
 
 type StoreEntry = { value: unknown; expiresAt: number };
@@ -73,6 +74,14 @@ class FileStore implements JsonStore {
     delete this.data[key];
     this.scheduleSave();
   }
+
+  async rpush(key: string, value: unknown): Promise<void> {
+    // Basic in-memory queue implementation for fallback
+    const list = Array.isArray(this.data[key]?.value) ? (this.data[key].value as unknown[]) : [];
+    list.push(value);
+    this.data[key] = { value: list, expiresAt: Date.now() + 86400 * 1000 };
+    this.scheduleSave();
+  }
 }
 
 class UpstashRestStore implements JsonStore {
@@ -135,6 +144,12 @@ class UpstashRestStore implements JsonStore {
   async del(key: string): Promise<void> {
     await this.call(`del/${encodeURIComponent(key)}`);
   }
+
+  async rpush(key: string, value: unknown): Promise<void> {
+    await this.call(`rpush/${encodeURIComponent(key)}`, {
+      body: JSON.stringify(value)
+    });
+  }
 }
 
 function sanitizeEnvValue(v: string | undefined): string {
@@ -173,6 +188,15 @@ function resilientStore(primary: JsonStore, fallback: JsonStore): JsonStore {
       } catch (e) {
         console.error("[dealCopilot] store.del failed, falling back:", e);
         await fallback.del(key);
+      }
+    },
+    async rpush(key: string, value: unknown) {
+      if (process.env.NODE_ENV === "production") return primary.rpush(key, value);
+      try {
+        await primary.rpush(key, value);
+      } catch (e) {
+        console.error("[dealCopilot] store.rpush failed, falling back:", e);
+        await fallback.rpush(key, value);
       }
     },
   };
