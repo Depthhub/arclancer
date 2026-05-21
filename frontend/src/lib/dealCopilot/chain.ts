@@ -2,7 +2,7 @@
  * Server-side chain reader for the Telegram Deal Copilot.
  * Uses viem directly (no wagmi hooks — those are client-only).
  */
-import { createPublicClient, http, type Address, type PublicClient } from "viem";
+import { createPublicClient, http, parseAbiItem, type Address, type PublicClient } from "viem";
 import { CONTRACTS, ESCROW_ABI, FACTORY_ABI, REGISTRY_ABI } from "@/lib/contracts";
 import { formatDollars } from "@/lib/utils";
 
@@ -164,8 +164,9 @@ export async function fetchRegisteredAgents(): Promise<OnchainAgent[]> {
     const client = getClient();
     const agents: OnchainAgent[] = [];
     
-    // We try querying until we hit an empty string for the name
-    for (let i = 1; i < 50; i++) { // cap at 50 for safety
+    // The public RPC fails with 413 on getLogs ranges > 10,000 blocks. 
+    // We try querying sequentially until we hit an empty string for the name
+    for (let i = 1; i < 100; i++) { // cap at 100 for safety
         try {
             const data = await client.readContract({
                 address: CONTRACTS.REGISTRY as Address,
@@ -197,6 +198,7 @@ export async function fetchRegisteredAgents(): Promise<OnchainAgent[]> {
             break; // EVM revert or bounds error
         }
     }
+    
     return agents;
 }
 

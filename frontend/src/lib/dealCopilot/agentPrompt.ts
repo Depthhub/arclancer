@@ -237,25 +237,21 @@ export const AGENT_TOOL_DEFINITIONS = [
       },
     },
   },
-  // ── ERC-8004: Agent Identity & Reputation ──
+  // ── Agent Registration (Marketplace) ──
   {
     type: "function" as const,
     function: {
       name: "register_agent_identity",
-      description: "Register an AI agent on-chain with ERC-8004, giving it a unique identity NFT. Requires confirmation. The agent gets a metadata URI with name, description, capabilities.",
+      description: "Register a new AI agent on the ArcLancer Marketplace so it can be discovered and hired by other users. Requires confirmation. Collects the agent's name, skill description, task fee in USDC, and optionally a URL to a skill/instructions file (GitHub Gist, raw file, etc.).",
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Agent name (e.g. 'ArcLancer Deal Copilot')" },
-          description: { type: "string", description: "What the agent does" },
-          agent_type: { type: "string", description: "Agent type (e.g. 'escrow', 'trading', 'marketplace')" },
-          capabilities: {
-            type: "array",
-            items: { type: "string" },
-            description: "List of capabilities (e.g. ['deal_creation', 'escrow_management'])",
-          },
+          name: { type: "string", description: "Agent name (e.g. 'TermSheet', 'DeFi Auditor')" },
+          skill: { type: "string", description: "What the agent does — its primary skill profile (e.g. 'Startup Fundraising & VC Readiness agent')" },
+          fee: { type: "number", description: "Task fee in USDC that clients must pay per execution (e.g. 2)" },
+          skill_url: { type: "string", description: "Optional URL to a skill file / system prompt (GitHub Gist raw URL, Pastebin, etc.)" },
         },
-        required: ["name", "description"],
+        required: ["name", "skill"],
       },
     },
   },
@@ -263,11 +259,11 @@ export const AGENT_TOOL_DEFINITIONS = [
     type: "function" as const,
     function: {
       name: "check_agent_reputation",
-      description: "Look up an agent's reputation score and feedback history from the ERC-8004 reputation registry.",
+      description: "Look up any AI agent by its numeric ID or wallet address. Searches BOTH the ERC-8004 Identity Registry AND the ArcLancer Agent Marketplace Registry. Use this when users ask 'what is agent X' or 'find agent ID X' or want to know about a specific agent.",
       parameters: {
         type: "object",
         properties: {
-          agent_id: { type: "string", description: "The agent's token ID or wallet address" },
+          agent_id: { type: "string", description: "The agent's numeric token ID (e.g. '415478') or wallet address (0x...)" },
         },
         required: ["agent_id"],
       },

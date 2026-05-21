@@ -12,14 +12,14 @@ const OPENCLAW_WORKER_URL = (process.env.OPENCLAW_WORKER_URL || "").trim();
 
 /** Keywords that indicate a heavy task requiring the OpenClaw worker */
 const HEAVY_TASK_KEYWORDS = [
-  "audit", "analyze", "review", "scan", "vulnerability",
-  "slither", "foundry", "forge", "compile",
-  "github", "repo", "repository", "clone",
-  "execute a task", "execute task", "run task",
-  "agent id", "agent_id",
-  "smart contract", "solidity",
-  "security review", "penetration",
-  "deploy", "test suite",
+  "audit", "slither", "foundry", "security review", "penetration test",
+  "execute task", "run task", 
+];
+
+/** Regex patterns that strongly indicate an OpenClaw worker task */
+const HEAVY_TASK_PATTERNS = [
+  /\b(analyze|review|scan).+(smart contract|solidity|repo|vulnerability)\b/i,
+  /\bclone.+(repo|github)\b/i,
 ];
 
 /**
@@ -27,8 +27,24 @@ const HEAVY_TASK_KEYWORDS = [
  */
 export function isHeavyTask(userText: string): boolean {
   if (!OPENCLAW_WORKER_URL) return false;
-  const lower = userText.toLowerCase();
-  return HEAVY_TASK_KEYWORDS.some((kw) => lower.includes(kw));
+  
+  // Explicit bypasses for conversational responses
+  const lower = userText.trim().toLowerCase();
+  if (lower.startsWith("yes") || lower.startsWith("no") || lower.startsWith("here is")) {
+    return false;
+  }
+
+  // Check explicit keywords
+  if (HEAVY_TASK_KEYWORDS.some((kw) => lower.includes(kw))) {
+    return true;
+  }
+
+  // Check regex patterns
+  if (HEAVY_TASK_PATTERNS.some((regex) => regex.test(lower))) {
+    return true;
+  }
+
+  return false;
 }
 
 /**

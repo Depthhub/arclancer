@@ -33,7 +33,6 @@ import {
   contractActionButtons,
 } from "@/lib/dealCopilot/chain";
 import { runAgentLoop, handleAgentConfirmation, isAgentEnabled } from "@/lib/dealCopilot/agent";
-import { resolveApiKey, saveUserApiKey, deleteUserApiKey } from "@/lib/dealCopilot/byok";
 import { isHeavyTask, dispatchToWorker, isWorkerEnabled } from "@/lib/dealCopilot/openclawDispatch";
 import type { DealCopilotState } from "@/lib/dealCopilot/types";
 import type { JsonStore } from "@/lib/dealCopilot/storage";
@@ -1219,23 +1218,6 @@ export async function POST(req: Request) {
       await handleBalanceCommand(store, token, chatId, fromId);
       return NextResponse.json({ ok: true });
     }
-    /* ── BYOK: /setkey and /removekey ── */
-    if (/^\/setkey\b/i.test(trimmedText)) {
-      const rawKey = trimmedText.substring("/setkey".length).trim();
-      const key = rawKey.replace(/\s+/g, "");
-      if (!key || (!key.startsWith("gsk_") && !key.startsWith("nvapi-") && !key.startsWith("sk-or-"))) {
-        await telegramSendMessage({ token, chatId, reply: { text: "Usage: `/setkey sk-or-v1-...`\n\nGet a free OpenRouter key at https://openrouter.ai/keys", parseMode: "Markdown" } });
-      } else {
-        await saveUserApiKey(store, fromId, key);
-        await telegramSendMessage({ token, chatId, reply: { text: "✅ **API Key saved!**\n\nYour OpenRouter key is stored securely. The AI agent will now use your personal key.\n\n_Use `/removekey` to delete it._", parseMode: "Markdown" } });
-      }
-      return NextResponse.json({ ok: true });
-    }
-    if (lowerText === "/removekey") {
-      await deleteUserApiKey(store, fromId);
-      await telegramSendMessage({ token, chatId, reply: { text: "🗑️ API key removed. The agent will fall back to the shared server key if configured.", parseMode: "Markdown" } });
-      return NextResponse.json({ ok: true });
-    }
     if (lowerText === "/deposit") {
       await handleDepositCommand(store, token, chatId, fromId);
       return NextResponse.json({ ok: true });
@@ -1543,7 +1525,7 @@ export async function POST(req: Request) {
         } catch (e) {
           console.error("[dealCopilot] OpenClaw dispatch failed, falling back to local agent", e);
           // Fall through to local agent on worker failure
-          const apiKey = await resolveApiKey(store, fromId);
+          const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
           if (apiKey) {
             try {
               const agentResult = await runAgentLoop(store, chatId, fromId, trimmedText, apiKey);
@@ -1558,9 +1540,9 @@ export async function POST(req: Request) {
       }
 
       // Route to local AI agent for light natural language processing
-      const apiKey = await resolveApiKey(store, fromId);
+      const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
-        await telegramSendMessage({ token, chatId, reply: { text: "🤖 AI agent needs an API key.\n\nRun `/setkey sk-or-v1-...` with a free key from https://openrouter.ai/keys", parseMode: "Markdown" } });
+        await telegramSendMessage({ token, chatId, reply: { text: "🤖 Server missing AI API key.", parseMode: "Markdown" } });
         return NextResponse.json({ ok: true });
       }
       try {

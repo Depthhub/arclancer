@@ -24,6 +24,8 @@ fi
 mkdir -p /app/workspace/plugins
 cp -r /app/plugins/arclancer-auditor /app/workspace/plugins/ 2>/dev/null || true
 
+export CONTROL_UI_ALLOWED_ORIGIN="${CONTROL_UI_ALLOWED_ORIGIN:-\"https://arclancer.vercel.app\"}"
+
 # 4. Create required OpenClaw config with Control UI access
 cat <<EOF > /root/.openclaw/openclaw.json
 {
@@ -32,7 +34,7 @@ cat <<EOF > /root/.openclaw/openclaw.json
     "port": 18789,
     "bind": "lan",
     "controlUi": {
-      "allowedOrigins": ["https://arclancer-production.up.railway.app"]
+      "allowedOrigins": [$CONTROL_UI_ALLOWED_ORIGIN]
     }
   }
 }
@@ -42,7 +44,7 @@ EOF
 export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-arclancer-test-2026}"
 
 # 6. Also set via CLI in case JSON structure differs
-openclaw config set gateway.controlUi.allowedOrigins '["https://arclancer-production.up.railway.app"]' 2>/dev/null || true
+openclaw config set gateway.controlUi.allowedOrigins "[$CONTROL_UI_ALLOWED_ORIGIN]" 2>/dev/null || true
 
 echo "[ArcLancer Worker] Starting Async Job Poller..."
 node /app/poller.js &

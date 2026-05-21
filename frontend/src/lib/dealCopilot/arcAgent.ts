@@ -245,11 +245,10 @@ export async function lookupAgentIdentity(agentIdOrAddress: string): Promise<{
   try {
     const pub = getPublicClient();
 
-    // If it looks like an address, search for Transfer events
+    // If it looks like an address, search for Transfer events with a wide block range
     if (/^0x[a-fA-F0-9]{40}$/.test(agentIdOrAddress)) {
-      const latestBlock = await pub.getBlockNumber();
-      // Reduce the block scan range to avoid HTTP 413 Payload Too Large from public RPC
-      const fromBlock = latestBlock > BigInt(4999) ? latestBlock - BigInt(4999) : BigInt(0);
+      // Use a fixed deployment-era fromBlock to capture ALL agents, not just recent ones
+      const fromBlock = BigInt(5040000);
       try {
         const logs = await pub.getLogs({
           address: IDENTITY_REGISTRY,
@@ -258,9 +257,9 @@ export async function lookupAgentIdentity(agentIdOrAddress: string): Promise<{
           ),
           args: { to: agentIdOrAddress as Address },
           fromBlock,
-          toBlock: latestBlock,
+          toBlock: "latest",
         });
-        if (logs.length === 0) return { found: false, error: "No agent NFTs found for this address in recent blocks. Please use the exact Agent Token ID." };
+        if (logs.length === 0) return { found: false, error: "No agent NFTs found for this address. Please use the exact Agent Token ID." };
         
         const tokenId = logs[logs.length - 1].args.tokenId!;
         const owner = await pub.readContract({
@@ -281,21 +280,59 @@ export async function lookupAgentIdentity(agentIdOrAddress: string): Promise<{
       }
     }
 
-    // Treat as agent ID (number)
+    // Treat as agent ID (number) — try ERC-8004 Identity Registry first
     const tokenId = BigInt(agentIdOrAddress);
-    const owner = await pub.readContract({
-      address: IDENTITY_REGISTRY,
-      abi: IDENTITY_ABI,
-      functionName: "ownerOf",
-      args: [tokenId],
-    });
-    const uri = await pub.readContract({
-      address: IDENTITY_REGISTRY,
-      abi: IDENTITY_ABI,
-      functionName: "tokenURI",
-      args: [tokenId],
-    });
-    return { found: true, agentId: agentIdOrAddress, owner, metadataURI: uri };
+    console.log(`[lookupAgent] Looking up agent ID ${agentIdOrAddress} (tokenId=${tokenId})`);
+    try {
+      const owner = await pub.readContract({
+        address: IDENTITY_REGISTRY,
+        abi: IDENTITY_ABI,
+        functionName: "ownerOf",
+        args: [tokenId],
+      });
+      const uri = await pub.readContract({
+        address: IDENTITY_REGISTRY,
+        abi: IDENTITY_ABI,
+        functionName: "tokenURI",
+        args: [tokenId],
+      });
+      console.log(`[lookupAgent] Found in ERC-8004 Identity Registry, owner=${owner}`);
+      return { found: true, agentId: agentIdOrAddress, owner, metadataURI: uri };
+    } catch (identityErr) {
+      console.log(`[lookupAgent] Not found in ERC-8004 Identity Registry, trying AgentRegistry marketplace...`, identityErr instanceof Error ? identityErr.message.slice(0, 100) : "");
+      // ERC-8004 Identity Registry didn't have it — fallback to AgentRegistry marketplace
+      try {
+        const { CONTRACTS, REGISTRY_ABI } = await import("@/lib/contracts");
+        console.log(`[lookupAgent] Querying AgentRegistry at ${CONTRACTS.REGISTRY} for tokenId ${tokenId}`);
+        const data = await pub.readContract({
+          address: CONTRACTS.REGISTRY as Address,
+          abi: REGISTRY_ABI,
+          functionName: "agents",
+          args: [tokenId],
+        }) as [string, string, string, bigint, boolean];
+        const [name, skill, toolName, taskFee, isActive] = data;
+        console.log(`[lookupAgent] AgentRegistry returned: name="${name}", skill="${skill}", active=${isActive}`);
+        if (!name) throw new Error("Agent not found — empty name");
+
+        const ownerAddr = await pub.readContract({
+          address: CONTRACTS.REGISTRY as Address,
+          abi: REGISTRY_ABI,
+          functionName: "ownerOf",
+          args: [tokenId],
+        }) as string;
+
+        console.log(`[lookupAgent] Found in AgentRegistry! owner=${ownerAddr}`);
+        return {
+          found: true,
+          agentId: agentIdOrAddress,
+          owner: ownerAddr,
+          metadataURI: `Agent: ${name} | Skill: ${skill} | Tool: ${toolName} | Fee: $${Number(taskFee) / 1e6} | Active: ${isActive}`,
+        };
+      } catch (registryErr) {
+        console.error(`[lookupAgent] AgentRegistry fallback also failed:`, registryErr instanceof Error ? registryErr.message.slice(0, 200) : registryErr);
+        return { found: false, error: `No agent found with ID ${agentIdOrAddress} in either the Identity Registry or the Agent Marketplace.` };
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return { found: false, error: msg.slice(0, 200) };

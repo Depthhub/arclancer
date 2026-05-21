@@ -89,14 +89,22 @@ const LAST_RESORT_MODEL = "meta-llama/llama-3.1-8b-instruct";
 async function callLLM(messages: AgentMessage[], apiKey: string): Promise<GemmaResponse> {
   if (!apiKey) throw new Error("No API key available.");
 
-  const isGroq = apiKey.startsWith("gsk_");
-  const apiUrl = isGroq ? "https://api.groq.com/openai/v1/chat/completions" : OPENROUTER_API_URL;
-  const modelsToTry = isGroq ? ["llama-3.3-70b-versatile"] : [MODEL_ID, FALLBACK_MODEL];
+  let apiUrl = OPENROUTER_API_URL;
+  let modelsToTry = [MODEL_ID, FALLBACK_MODEL];
+
+  if (apiKey.startsWith("gsk_")) {
+    apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+    modelsToTry = ["llama-3.3-70b-versatile"];
+  } else if (!apiKey.startsWith("sk-or-")) {
+    const base = process.env.ANTHROPIC_BASE_URL || "https://agentrouter.org/";
+    apiUrl = base.endsWith("/") ? `${base}v1/chat/completions` : `${base}/v1/chat/completions`;
+    modelsToTry = [process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929", FALLBACK_MODEL];
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${apiKey}`
   };
-  if (!isGroq) {
+  if (!apiKey.startsWith("gsk_")) {
     headers["HTTP-Referer"] = "https://arclancer.vercel.app";
     headers["X-Title"] = "ArcLancer Deal Copilot";
   }
@@ -531,19 +539,46 @@ async function executeConfirmedAction(
     }
 
     case "register_agent": {
-      const result = await registerAgentIdentity(pk, {
-        name: (p.name as string) || "ArcLancer Copilot",
-        description: (p.description as string) || "AI escrow agent",
-        agent_type: (p.agent_type as string) || "escrow",
-        capabilities: (p.capabilities as string[]) || ["deal_creation", "escrow_management"],
-      });
+      const { deployAgent } = await import("@/lib/dealCopilot/executor");
+      const agentName = (p.name as string) || "Unnamed Agent";
+      const agentSkill = (p.skill as string) || "General AI";
+      const agentFee = (p.fee as number) || 0;
+      const skillUrl = (p.skill_url as string) || "";
+
+      const result = await deployAgent(pk, agentName, agentSkill, "None", agentFee);
       if (result.success) {
+        const agentId = result.contractAddress; // This is the token ID from the AgentRegistered event
+
+        // Save off-chain metadata to Redis so the agent is fully functional
+        if (agentId) {
+          const skills: string[] = [];
+          if (skillUrl) skills.push(skillUrl);
+
+          await store.setJSON(`agent_meta:${agentId}`, {
+            name: agentName,
+            systemPrompt: skillUrl
+              ? `You are ${agentName}, a ${agentSkill} agent. Follow the instructions at your skill URL precisely.`
+              : `You are ${agentName}, a ${agentSkill} agent.`,
+            skills,
+            price: agentFee,
+            creatorId: fromId,
+            ownerWallet: wallet.address,
+            createdAt: Date.now(),
+          }, 60 * 60 * 24 * 365); // 1 year TTL
+        }
+
         const lines = [
-          "**Agent Registered!**",
-          "Agent ID: " + (result.agentId || ""),
-          "Tx: " + (result.txHash?.slice(0, 14) || "") + "...",
+          "🎉 **Agent Registered on Marketplace!**",
+          "",
+          `📛 Name: **${agentName}**`,
+          `🆔 Agent ID: \`${agentId}\``,
+          `✨ Skill: ${agentSkill}`,
+          `💰 Fee: $${agentFee} USDC`,
+          `🔗 Tx: \`${(result.hash?.slice(0, 14) || "")}…\``,
         ];
-        if (result.explorerUrl) lines.push(result.explorerUrl);
+        if (skillUrl) lines.push(`📄 Skill URL: ${skillUrl}`);
+        if (result.explorerUrl) lines.push(`🔗 ${result.explorerUrl}`);
+        lines.push("", "_Your agent is now live and hireable on the ArcLancer Marketplace!_");
         return lines.join("\n");
       }
       return "Registration failed: " + (result.error || "unknown");

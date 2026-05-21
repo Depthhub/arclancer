@@ -3,7 +3,6 @@
  * Each function takes structured params from Gemma 4 and calls existing helpers.
  */
 import type { JsonStore } from "@/lib/dealCopilot/storage";
-import { resolveApiKey } from "@/lib/dealCopilot/byok";
 import type { DealCopilotState, DealDraft, AgentPendingAction, AgentPendingActionType } from "@/lib/dealCopilot/types";
 import { formatDollars } from "@/lib/utils";
 import { randomId } from "@/lib/dealCopilot/crypto";
@@ -325,9 +324,9 @@ export async function executeRegisterAgentIdentity(
   chatId: string,
   params: {
     name: string;
-    description: string;
-    agent_type?: string;
-    capabilities?: string[];
+    skill: string;
+    fee?: number;
+    skill_url?: string;
   }
 ): Promise<string> {
   // Auto-save pending action and trigger confirmation
@@ -337,19 +336,28 @@ export async function executeRegisterAgentIdentity(
     id: randomId("deal"), chatId, createdAt: Date.now(), updatedAt: Date.now(),
     payoutCurrency: "USDC" as const, totalAmount: 0, freelancerAddress: "", milestones: [],
   };
+  const fee = params.fee ?? 0;
   draft.pendingAction = {
     type: "register_agent",
     params: {
       name: params.name,
-      description: params.description,
-      agent_type: params.agent_type || "escrow",
-      capabilities: params.capabilities || ["deal_creation", "escrow_management"],
+      skill: params.skill,
+      fee,
+      skill_url: params.skill_url || "",
     },
-    description: `Register agent "${params.name}" on-chain as ERC-8004 identity NFT`,
+    description: `Register agent "${params.name}" on ArcLancer Marketplace with fee $${fee} USDC`,
   };
   draft.updatedAt = Date.now();
   await store.setJSON(key, { stage: "agent_confirming" as const, draft }, getDealTtlSeconds());
-  return `CONFIRMATION_NEEDED: Register agent "${params.name}" (${params.agent_type || "escrow"}) on Arc Testnet. This will mint an ERC-8004 identity NFT.`;
+  
+  const lines = [
+    `CONFIRMATION_NEEDED: Register agent **${params.name}** on the ArcLancer Marketplace.`,
+    `• Skill: ${params.skill}`,
+    `• Fee: $${fee} USDC per task`,
+  ];
+  if (params.skill_url) lines.push(`• Skill URL: ${params.skill_url}`);
+  lines.push(`\nThis will mint an on-chain agent NFT on Arc Testnet.`);
+  return lines.join("\n");
 }
 
 export async function executeCheckAgentReputation(
@@ -359,14 +367,31 @@ export async function executeCheckAgentReputation(
   if (!result.found) {
     return `No agent found for "${params.agent_id}". ${result.error || ""}`;
   }
-  return [
+
+  const lines = [
     `🤖 **Agent Identity**`,
     ``,
     `🆔 Agent ID: ${result.agentId}`,
     `👤 Owner: \`${result.owner?.slice(0, 10)}…${result.owner?.slice(-8)}\``,
-    `📄 Metadata: ${result.metadataURI?.slice(0, 50)}…`,
-    `🔗 Explorer: https://testnet.arcscan.app/address/${result.owner}`,
-  ].join("\n");
+  ];
+
+  // If metadata came from the AgentRegistry fallback, it starts with "Agent:"
+  if (result.metadataURI?.startsWith("Agent:")) {
+    // Parse structured metadata: "Agent: Name | Skill: X | Tool: Y | Fee: $Z | Active: true"
+    const parts = result.metadataURI.split(" | ");
+    for (const part of parts) {
+      if (part.startsWith("Agent:")) lines.push(`📛 Name: **${part.replace("Agent: ", "")}**`);
+      else if (part.startsWith("Skill:")) lines.push(`✨ ${part}`);
+      else if (part.startsWith("Tool:")) lines.push(`🔧 ${part}`);
+      else if (part.startsWith("Fee:")) lines.push(`💰 ${part}`);
+      else if (part.startsWith("Active:")) lines.push(`🟢 ${part}`);
+    }
+  } else {
+    lines.push(`📄 Metadata: ${result.metadataURI?.slice(0, 100)}…`);
+  }
+
+  lines.push(`🔗 Explorer: https://testnet.arcscan.app/address/${result.owner}`);
+  return lines.join("\n");
 }
 
 export async function executeCreateAgenticJob(
@@ -476,57 +501,30 @@ export async function executeAgentTask(
       }
     }
 
-    // Step 2: Resolve API key — try user key, then GROQ_API_KEY, then resolveApiKey chain
-    let apiKey: string | null = null;
-    
-    // Priority 1: Server-side GROQ key (fastest, free)
-    const groqEnv = (process.env.GROQ_API_KEY ?? "").replace(/[^\x20-\x7E]/g, "").trim();
-    if (groqEnv && groqEnv.startsWith("gsk_") && groqEnv.length > 20) {
-      apiKey = groqEnv;
-    }
-    
-    // Priority 2: User's stored key or other server keys
+    // Step 2: Resolve API key
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      apiKey = await resolveApiKey(store, fromId);
-    }
-    
-    if (!apiKey) {
-      return `❌ No API key available. The server needs a GROQ_API_KEY environment variable, or you can set your own with \`/setkey gsk_...\``;
+      return `❌ No API key available. The server needs an ANTHROPIC_API_KEY environment variable.`;
     }
 
-    // Step 3: Route to correct endpoint based on key type
-    let url: string;
-    let model: string;
-    let headers: Record<string, string>;
-    
-    if (apiKey.startsWith("gsk_")) {
-      url = "https://api.groq.com/openai/v1/chat/completions";
-      model = "llama-3.3-70b-versatile";
-      headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      };
-    } else {
-      // OpenRouter key (sk-or-*)
-      url = "https://openrouter.ai/api/v1/chat/completions";
-      model = "google/gemma-4-26b-a4b-it"; // Fast, high rate-limit model
-      headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://arclancer.vercel.app",
-        "X-Title": "Arclancer Agent Node"
-      };
-    }
+    // Step 3: Route to Anthropic endpoint
+    const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://agentrouter.org/";
+    const url = baseUrl.endsWith("/") ? `${baseUrl}v1/messages` : `${baseUrl}/v1/messages`;
+    const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
 
-    console.log(`[executeAgentTask] Calling ${apiKey.startsWith("gsk_") ? "Groq" : "OpenRouter"} for agent ${agentId}`);
+    console.log(`[executeAgentTask] Calling AgentRouter for agent ${agentId}`);
 
     const res = await fetch(url, {
       method: "POST",
-      headers,
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         model,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: taskDescription }
         ],
         max_tokens: 3000
@@ -540,11 +538,11 @@ export async function executeAgentTask(
     }
 
     const data = await res.json();
-    if (!data.choices?.[0]?.message?.content) {
+    if (!data.content?.[0]?.text) {
       console.error(`[executeAgentTask] Unexpected API response:`, JSON.stringify(data).slice(0, 300));
       return `❌ Agent execution failed: AI returned an unexpected response format.`;
     }
-    const output = data.choices[0].message.content;
+    const output = data.content[0].text;
 
     return `🧠 **Agent Execution Complete!**\n\nThe registered AI Agent processed your task using its unique skill pipeline.\n\n**Output:**\n${output}`;
   } catch (e) {
