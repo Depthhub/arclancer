@@ -502,29 +502,26 @@ export async function executeAgentTask(
     }
 
     // Step 2: Resolve API key
-    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.DIGITALOCEAN_API_KEY || "";
     if (!apiKey) {
-      return `❌ No API key available. The server needs an ANTHROPIC_API_KEY environment variable.`;
+      return `❌ No API key available. The server needs a DIGITALOCEAN_API_KEY environment variable.`;
     }
 
-    // Step 3: Route to Anthropic endpoint
-    const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://agentrouter.org/";
-    const url = baseUrl.endsWith("/") ? `${baseUrl}v1/messages` : `${baseUrl}/v1/messages`;
-    const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
+    const url = "https://inference.do-ai.run/v1/chat/completions";
+    const model = "anthropic-claude-4.5-sonnet";
 
-    console.log(`[executeAgentTask] Calling AgentRouter for agent ${agentId}`);
+    console.log(`[executeAgentTask] Calling DigitalOcean for agent ${agentId}`);
 
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         model,
-        system: systemPrompt,
         messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: taskDescription }
         ],
         max_tokens: 3000
@@ -538,11 +535,11 @@ export async function executeAgentTask(
     }
 
     const data = await res.json();
-    if (!data.content?.[0]?.text) {
+    if (!data.choices?.[0]?.message?.content) {
       console.error(`[executeAgentTask] Unexpected API response:`, JSON.stringify(data).slice(0, 300));
       return `❌ Agent execution failed: AI returned an unexpected response format.`;
     }
-    const output = data.content[0].text;
+    const output = data.choices[0].message.content;
 
     return `🧠 **Agent Execution Complete!**\n\nThe registered AI Agent processed your task using its unique skill pipeline.\n\n**Output:**\n${output}`;
   } catch (e) {

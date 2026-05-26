@@ -86,28 +86,17 @@ interface GemmaResponse {
 const FALLBACK_MODEL = "meta-llama/llama-3.3-70b-instruct";
 const LAST_RESORT_MODEL = "meta-llama/llama-3.1-8b-instruct";
 
-async function callLLM(messages: AgentMessage[], apiKey: string): Promise<GemmaResponse> {
-  if (!apiKey) throw new Error("No API key available.");
+async function callLLM(messages: AgentMessage[], _apiKey?: string): Promise<GemmaResponse> {
+  let apiKey = process.env.DIGITALOCEAN_API_KEY || "";
+  if (!apiKey) throw new Error("No API key available. Please set DIGITALOCEAN_API_KEY.");
 
-  let apiUrl = OPENROUTER_API_URL;
-  let modelsToTry = [MODEL_ID, FALLBACK_MODEL];
+  let apiUrl = "https://inference.do-ai.run/v1/chat/completions";
+  let modelsToTry = ["anthropic-claude-4.5-sonnet", FALLBACK_MODEL];
 
-  if (apiKey.startsWith("gsk_")) {
-    apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-    modelsToTry = ["llama-3.3-70b-versatile"];
-  } else if (!apiKey.startsWith("sk-or-")) {
-    const base = process.env.ANTHROPIC_BASE_URL || "https://agentrouter.org/";
-    apiUrl = base.endsWith("/") ? `${base}v1/chat/completions` : `${base}/v1/chat/completions`;
-    modelsToTry = [process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929", FALLBACK_MODEL];
-  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${apiKey}`
   };
-  if (!apiKey.startsWith("gsk_")) {
-    headers["HTTP-Referer"] = "https://arclancer.vercel.app";
-    headers["X-Title"] = "ArcLancer Deal Copilot";
-  }
 
   // Tier 1 & 2: Try models with tools. If hitting 429 or provider 400, try next model.
   let lastError = "";
@@ -221,6 +210,7 @@ export async function runAgentLoop(
   ];
 
   // ReAct loop
+  let apiKey = process.env.DIGITALOCEAN_API_KEY || "";
   if (!apiKey) throw new Error("No API key configured for Copilot.");
   
   for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration++) {
