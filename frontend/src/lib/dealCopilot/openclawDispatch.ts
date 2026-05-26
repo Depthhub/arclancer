@@ -59,6 +59,7 @@ export function isWorkerEnabled(): boolean {
  */
 export async function isWorkerHealthy(): Promise<boolean> {
   if (!OPENCLAW_WORKER_URL) return false;
+  if (OPENCLAW_WORKER_URL === "redis") return true;
   try {
     const res = await fetch(`${OPENCLAW_WORKER_URL}/health`, { method: "GET" });
     const data = await res.json();

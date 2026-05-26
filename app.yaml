@@ -1,0 +1,58 @@
+name: arclancer
+services:
+  - name: frontend
+    github:
+      repo: Depthhub/arclancer
+      branch: main
+      deploy_on_push: true
+    source_dir: frontend
+    build_command: npm run build
+    run_command: npm start
+    http_port: 3000
+    envs:
+      - key: DIGITALOCEAN_API_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: TELEGRAM_BOT_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: TELEGRAM_WEBHOOK_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: WALLET_ENCRYPTION_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: OPENCLAW_WORKER_URL
+        value: "redis"
+        scope: RUN_TIME
+
+workers:
+  - name: openclaw-worker
+    github:
+      repo: Depthhub/arclancer
+      branch: main
+      deploy_on_push: true
+    source_dir: backend/worker
+    dockerfile_path: Dockerfile
+    envs:
+      - key: DIGITALOCEAN_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: VERCEL_CALLBACK_URL
+        value: "${frontend.PUBLIC_URL}/api/telegram/callback"
+        scope: RUN_TIME
+      - key: OPENCLAW_WORKER_SECRET
+        value: "arclancer-worker-secret-2026"
+        scope: RUN_TIME

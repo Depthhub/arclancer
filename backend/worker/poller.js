@@ -13,9 +13,9 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || "https://inviting-mink-7
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "gQAAAAAAARGPAAIncDE4ZWI3ZGQwNGU0MDA0ZTg3OTVlZDE3OWQxMDIxMmYzY3AxNzAwMzE";
 const VERCEL_CALLBACK = process.env.VERCEL_CALLBACK_URL || "https://arclancer.vercel.app/api/telegram/callback";
 const WORKER_SECRET = process.env.OPENCLAW_WORKER_SECRET || "arclancer-worker-secret-2026";
-const LLM_API_KEY = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+const LLM_API_KEY = process.env.DIGITALOCEAN_API_KEY || "";
 
-console.log(`[Poller] Environment Check: ANTHROPIC=${!!process.env.ANTHROPIC_API_KEY}`);
+console.log(`[Poller] Environment Check: DIGITALOCEAN=${!!process.env.DIGITALOCEAN_API_KEY}`);
 
 const SLEEP_MS = 5000;
 
@@ -33,15 +33,13 @@ async function executeCommand(cmd) {
 
 async function callLLM(prompt, systemPrompt) {
   if (!LLM_API_KEY) throw new Error("No LLM API Key available for analysis.");
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://agentrouter.org/";
-  const endpoint = baseUrl.endsWith("/") ? `${baseUrl}v1/messages` : `${baseUrl}/v1/messages`;
-  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
+  const endpoint = "https://inference.do-ai.run/v1/chat/completions";
+  const model = "anthropic-claude-4.5-sonnet";
 
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
-      "x-api-key": LLM_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${LLM_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -55,8 +53,8 @@ async function callLLM(prompt, systemPrompt) {
   });
 
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message || "LLM Call Failed");
-  return json.content[0].text;
+  if (!json.choices?.[0]?.message?.content) throw new Error(json.error?.message || "LLM Call Failed");
+  return json.choices[0].message.content;
 }
 
 async function processJob(job) {
