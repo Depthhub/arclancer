@@ -210,8 +210,7 @@ export async function runAgentLoop(
   ];
 
   // ReAct loop
-  let apiKey = process.env.DIGITALOCEAN_API_KEY || "";
-  if (!apiKey) throw new Error("No API key configured for Copilot.");
+  if (!process.env.DIGITALOCEAN_API_KEY) throw new Error("No API key configured for Copilot.");
   
   for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration++) {
     let response: GemmaResponse;
