@@ -91,7 +91,7 @@ async function callLLM(messages: AgentMessage[], _apiKey?: string): Promise<Gemm
   if (!apiKey) throw new Error("No API key available. Please set DIGITALOCEAN_API_KEY.");
 
   let apiUrl = "https://inference.do-ai.run/v1/chat/completions";
-  let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "llama3.3-70b-instruct", FALLBACK_MODEL];
+  let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "deepseek-3.2", "deepseek-4-flash", "llama3.3-70b-instruct", FALLBACK_MODEL];
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

@@ -508,7 +508,7 @@ export async function executeAgentTask(
     }
 
     const url = "https://inference.do-ai.run/v1/chat/completions";
-    let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "llama3.3-70b-instruct"];
+    let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "deepseek-3.2", "deepseek-4-flash", "llama3.3-70b-instruct"];
 
     console.log(`[executeAgentTask] Calling DigitalOcean for agent ${agentId}`);
 
