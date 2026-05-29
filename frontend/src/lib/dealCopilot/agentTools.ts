@@ -508,7 +508,7 @@ export async function executeAgentTask(
     }
 
     const url = "https://inference.do-ai.run/v1/chat/completions";
-    const modelsToTry = ["anthropic-claude-4.5-sonnet", "llama3.3-70b-instruct"];
+    let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "llama3.3-70b-instruct"];
 
     console.log(`[executeAgentTask] Calling DigitalOcean for agent ${agentId}`);
 
@@ -538,6 +538,7 @@ export async function executeAgentTask(
           lastError = `${res.status}: ${errorBody.slice(0, 300)}`;
           console.error(`[executeAgentTask] ${model} failed with ${res.status}, trying next...`);
           if (res.status === 401 || res.status === 403 || res.status === 400 || res.status === 429) {
+            modelsToTry = modelsToTry.filter(m => m !== model);
             continue;
           }
           break; // Stop on unknown errors
