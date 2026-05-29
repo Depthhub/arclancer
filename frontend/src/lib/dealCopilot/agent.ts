@@ -91,7 +91,7 @@ async function callLLM(messages: AgentMessage[], _apiKey?: string): Promise<Gemm
   if (!apiKey) throw new Error("No API key available. Please set DIGITALOCEAN_API_KEY.");
 
   let apiUrl = "https://inference.do-ai.run/v1/chat/completions";
-  let modelsToTry = ["anthropic-claude-4.5-sonnet", FALLBACK_MODEL];
+  let modelsToTry = ["anthropic-claude-4.5-sonnet", "llama3.3-70b-instruct", FALLBACK_MODEL];
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -130,7 +130,9 @@ async function callLLM(messages: AgentMessage[], _apiKey?: string): Promise<Gemm
 
     if (res.status === 401 || res.status === 403) {
       const errBody = await res.text().catch(() => "");
-      throw new Error(`LLM API Auth error ${res.status}: ${errBody.slice(0, 300)}`);
+      lastError = `${res.status}: ${errBody.slice(0, 200)}`;
+      console.log(`[agent] Auth/Tier error on ${model}: ${lastError.slice(0, 100)}, trying next...`);
+      continue;
     }
 
     if (res.status === 429 || res.status === 400 || res.status === 402) {

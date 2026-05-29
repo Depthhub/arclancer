@@ -508,30 +508,51 @@ export async function executeAgentTask(
     }
 
     const url = "https://inference.do-ai.run/v1/chat/completions";
-    const model = "anthropic-claude-4.5-sonnet";
+    const modelsToTry = ["anthropic-claude-4.5-sonnet", "llama3.3-70b-instruct"];
 
     console.log(`[executeAgentTask] Calling DigitalOcean for agent ${agentId}`);
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: taskDescription }
-        ],
-        max_tokens: 3000
-      })
-    });
+    let res: Response | null = null;
+    let lastError = "";
 
-    if (!res.ok) {
-      const errorBody = await res.text().catch(() => "unknown");
-      console.error(`[executeAgentTask] API returned ${res.status}: ${errorBody.slice(0, 300)}`);
-      return `❌ Agent execution failed: AI API returned HTTP ${res.status}. Check server logs.`;
+    for (const model of modelsToTry) {
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: taskDescription }
+            ],
+            max_tokens: 3000
+          })
+        });
+
+        if (!res.ok) {
+          const errorBody = await res.text().catch(() => "unknown");
+          lastError = `${res.status}: ${errorBody.slice(0, 300)}`;
+          console.error(`[executeAgentTask] ${model} failed with ${res.status}, trying next...`);
+          if (res.status === 401 || res.status === 403 || res.status === 400 || res.status === 429) {
+            continue;
+          }
+          break; // Stop on unknown errors
+        }
+        
+        break; // Success!
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : "Network error";
+        console.error(`[executeAgentTask] Fetch error on ${model}: ${lastError}, trying next...`);
+        continue;
+      }
+    }
+
+    if (!res || !res.ok) {
+      return `❌ Agent execution failed: AI API returned errors. Last error: ${lastError}`;
     }
 
     const data = await res.json();
