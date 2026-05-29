@@ -1540,7 +1540,7 @@ export async function POST(req: Request) {
       }
 
       // Route to local AI agent for light natural language processing
-      const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+      const apiKey = process.env.DIGITALOCEAN_API_KEY;
       if (!apiKey) {
         await telegramSendMessage({ token, chatId, reply: { text: "🤖 Server missing AI API key.", parseMode: "Markdown" } });
         return NextResponse.json({ ok: true });
