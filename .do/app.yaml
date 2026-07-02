@@ -17,7 +17,7 @@ services:
         value: "true"
         scope: RUN_AND_BUILD_TIME
       - key: NEXT_PUBLIC_FACTORY_ADDRESS
-        value: "0x0ADf70A390868c7016697edF0640791c3B3e5f31"
+        value: "0x9b48008e55232E9b61886417b79a881f0A71568F"
         scope: RUN_AND_BUILD_TIME
       - key: NEXT_PUBLIC_USDC_ADDRESS
         value: "0x3600000000000000000000000000000000000000"
