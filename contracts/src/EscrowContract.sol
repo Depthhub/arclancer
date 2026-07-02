@@ -382,6 +382,8 @@ contract EscrowContract is ReentrancyGuard, Pausable {
      * @param recipient Address to receive converted tokens
      */
     function _executeStableFXConversion(uint256 amount, address recipient) internal {
+
+        require(amount > 0, "Amount must be > 0");
         // Get quote from StableFX
         IStableFX.Quote memory quote = stableFX.getQuote(usdcToken, payoutCurrency, amount);
         

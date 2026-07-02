@@ -13,6 +13,7 @@ import { ContractStatus, ContractDetails } from '@/types';
 import { ESCROW_ABI } from '@/lib/contracts';
 import { ArrowLeft, Briefcase, Wallet, RefreshCw, DollarSign } from 'lucide-react';
 import { formatUSDC } from '@/lib/utils';
+import { BridgeUsdcCard } from '@/components/cctp/BridgeUsdcCard';
 
 type StatusFilter = 'ALL' | ContractStatus;
 
@@ -127,6 +128,10 @@ export default function FreelancerContractsPage() {
                     >
                         Refresh
                     </Button>
+                </div>
+
+                <div className="mb-8">
+                    <BridgeUsdcCard mode="outbound" />
                 </div>
 
                 {/* Earnings Summary */}

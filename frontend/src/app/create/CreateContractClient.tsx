@@ -57,7 +57,9 @@ export default function CreateContractClient() {
         name: 'milestones',
     });
 
-    // Prefill from Telegram deal copilot draft token (?draft=...)
+    // Prefill from Telegram Deal Copilot (?draft=...)
+    // Why: users draft milestone terms in Telegram, then jump into ArcLancer to sign the on-chain transaction
+    // with their wallet. The bot never handles private keys; it only generates a signed draft token.
     useEffect(() => {
         const token = searchParams.get('draft');
         if (!token) return;
@@ -115,7 +117,8 @@ export default function CreateContractClient() {
     const milestonesTotal = watchMilestones.reduce((sum, m) => sum + (parseFloat(m.amount) || 0), 0);
     const milestonesValid = Math.abs(milestonesTotal - netAmount) < 0.01;
 
-    // Check USDC balance via ERC20 precompile
+    // Check USDC balance via ERC-20 interface.
+    // Arc context: USDC is used as gas on Arc, and some environments may expose native balance differently.
     const { data: usdcBalance } = useReadContract({
         address: CONTRACTS.USDC as `0x${string}`,
         abi: ERC20_ABI,
@@ -124,7 +127,9 @@ export default function CreateContractClient() {
         query: { enabled: !!address },
     });
 
-    // Also check native balance (on Arc Testnet, USDC IS the native gas token)
+    // Also check native balance.
+    // Arc context: USDC is the native gas token, so native balance can be the authoritative source even if
+    // ERC-20 `balanceOf` behaves unexpectedly depending on RPC/precompile behavior.
     const { data: nativeBalance } = useBalance({ address });
 
     // Check current allowance
@@ -136,8 +141,8 @@ export default function CreateContractClient() {
         query: { enabled: !!address },
     });
 
-    // Use the higher of ERC20 precompile balance or native balance
-    // On Arc, USDC is native so the precompile balanceOf may return 0
+    // Use the higher of ERC-20 balanceOf or native balance.
+    // Why: on Arc, USDC is native, so certain balance read paths can return 0 even when the wallet is funded.
     const erc20Bal = usdcBalance ? Number(usdcBalance) / 1e6 : 0;
     const nativeBal = nativeBalance ? Number(nativeBalance.value) / 10 ** (nativeBalance.decimals) : 0;
     const effectiveBalance = Math.max(erc20Bal, nativeBal);
@@ -232,7 +237,8 @@ export default function CreateContractClient() {
             description: m.description,
         }));
 
-        // Check if we need approval first
+        // ArcLancer fee collection uses an allowance flow (approve → create).
+        // On Arc, fees are stablecoin-denominated which keeps UX predictable for users.
         if (!hasEnoughAllowance) {
             setTxStep('approving');
             writeApprove({

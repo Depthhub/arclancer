@@ -1,6 +1,10 @@
 /**
  * Server-side chain reader for the Telegram Deal Copilot.
  * Uses viem directly (no wagmi hooks — those are client-only).
+ *
+ * Arc/Circle context:
+ * - Arc Testnet is EVM-compatible and stablecoin-native (USDC as gas).
+ * - We keep these reads server-side so Telegram can ask for status without requiring a wallet connection.
  */
 import { createPublicClient, http, parseAbiItem, type Address, type PublicClient } from "viem";
 import { CONTRACTS, ESCROW_ABI, FACTORY_ABI, REGISTRY_ABI } from "@/lib/contracts";
@@ -16,6 +20,7 @@ const ARC_TESTNET_CHAIN = {
     nativeCurrency: { decimals: 18, name: "USDC", symbol: "USDC" },
     rpcUrls: {
         default: {
+            // `.trim()` avoids failures from env values containing trailing whitespace/newlines.
             http: [process.env.NEXT_PUBLIC_ARC_TESTNET_RPC_URL?.trim() || "https://rpc.testnet.arc.network"],
         },
     },
@@ -119,6 +124,8 @@ export async function fetchContractDetails(contractAddress: string): Promise<Onc
             const m = rawMilestones[i];
             milestones.push({
                 index: i,
+                // USDC/EURC are typically 6 decimals in their ERC-20 interfaces; the app treats milestone amounts
+                // as 6-decimal stablecoin units for display consistency.
                 amount: Number(m.amount) / 1e6,
                 description: m.description,
                 deliverableURI: m.deliverableURI,
@@ -268,6 +275,7 @@ export function contractActionButtons(c: OnchainContractSummary): Array<Array<{ 
     buttons.push([{ text: "🔗 View Contract", url: `${base}/contract/${c.address}` }]);
 
     if (!c.funded && c.status === 0) {
+        // Deep-link pattern: Telegram prompts the user, but transaction signing still happens on the web app wallet.
         buttons.push([{ text: "💰 Fund Contract", url: `${base}/contract/${c.address}?action=fund` }]);
     }
 

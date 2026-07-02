@@ -31,8 +31,12 @@ import {
     Clock,
     Wallet,
     RefreshCw,
-    Loader2
+    Loader2,
+    ArrowRightLeft,
 } from 'lucide-react';
+import { BridgeUsdcModal } from '@/components/cctp/BridgeUsdcModal';
+import { isCctpUiEnabled } from '@/lib/cctp/featureFlag';
+import toast from 'react-hot-toast';
 
 export default function ContractDetailPage() {
     const params = useParams();
@@ -41,6 +45,7 @@ export default function ContractDetailPage() {
     const [activeTab, setActiveTab] = useState<'milestones' | 'timeline'>('milestones');
     const [fundingStep, setFundingStep] = useState<'idle' | 'approving' | 'funding'>('idle');
     const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [showBridgeModal, setShowBridgeModal] = useState(false);
 
     // Fetch real contract data
     const { details, isLoading: detailsLoading, error: detailsError, refetch: refetchDetails } = useContractDetails(contractAddress);
@@ -60,8 +65,9 @@ export default function ContractDetailPage() {
         query: { enabled: !!address && !!details },
     });
 
-    // USDC balance
-    const { data: usdcBalance } = useReadContract({
+    // USDC balance via ERC-20 interface.
+    // Arc context: USDC is the native gas token on Arc; this read supports typical allowance/balance UX.
+    const { data: usdcBalance, refetch: refetchUsdcBalance } = useReadContract({
         address: CONTRACTS.USDC as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'balanceOf',
@@ -299,6 +305,7 @@ export default function ContractDetailPage() {
                             <h1 className="text-2xl font-bold text-neutral-900">Contract Details</h1>
                             <StatusBadge status={details.status} />
                         </div>
+                        {/* ArcScan is the canonical explorer for Arc Testnet contracts */}
                         <a
                             href={`https://testnet.arcscan.app/address/${contractAddress}`}
                             target="_blank"
@@ -402,8 +409,20 @@ export default function ContractDetailPage() {
                                 {isClient && !details.funded && (
                                     <>
                                         {!hasEnoughBalance && (
-                                            <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                                                Insufficient USDC balance. You need {formatUSDC(details.totalAmount)}.
+                                            <div className="w-full space-y-3">
+                                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                                                    Insufficient USDC balance. You need {formatUSDC(details.totalAmount)}.
+                                                </div>
+                                                {isCctpUiEnabled() && (
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setShowBridgeModal(true)}
+                                                        leftIcon={<ArrowRightLeft className="w-4 h-4" />}
+                                                        className="w-full sm:w-auto border-blue-200 text-blue-700 hover:bg-blue-50"
+                                                    >
+                                                        Bridge USDC to Arc
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                         <Button
@@ -485,6 +504,19 @@ export default function ContractDetailPage() {
                     isPending={escrow.isPending}
                     contractAddress={contractAddress}
                 />
+
+                {isCctpUiEnabled() && details && (
+                    <BridgeUsdcModal
+                        isOpen={showBridgeModal}
+                        onClose={() => setShowBridgeModal(false)}
+                        mode="inbound"
+                        suggestedAmount={Number(details.totalAmount) / 1e6}
+                        onSuccess={() => {
+                            refetchUsdcBalance();
+                            toast.success('USDC bridged — you can now fund escrow');
+                        }}
+                    />
+                )}
 
                 {/* Tabs */}
                 <div className="flex gap-2 mb-6">

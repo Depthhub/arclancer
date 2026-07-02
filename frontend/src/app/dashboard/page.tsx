@@ -20,6 +20,8 @@ import {
     MilestoneDetailsDrawer,
     WithdrawModal,
 } from '@/components/dashboard';
+import { BridgeUsdcModal } from '@/components/cctp/BridgeUsdcModal';
+import { isCctpUiEnabled } from '@/lib/cctp/featureFlag';
 import type { PendingAction, ActiveContract } from '@/components/dashboard';
 import type { MilestoneDetails } from '@/components/dashboard/MilestoneDetailsDrawer';
 import { Plus, Wallet } from 'lucide-react';
@@ -46,6 +48,7 @@ export default function DashboardPage() {
 
     // Withdraw modal state
     const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+    const [bridgeModalOpen, setBridgeModalOpen] = useState(false);
 
     if (!isConnected) {
         return (
@@ -261,7 +264,23 @@ export default function DashboardPage() {
                 isOpen={withdrawModalOpen}
                 onClose={() => setWithdrawModalOpen(false)}
                 approvedMilestones={approvedMilestones}
+                onBridgeUsdcClick={
+                    isCctpUiEnabled()
+                        ? () => {
+                              setWithdrawModalOpen(false);
+                              setBridgeModalOpen(true);
+                          }
+                        : undefined
+                }
             />
+
+            {isCctpUiEnabled() && (
+                <BridgeUsdcModal
+                    isOpen={bridgeModalOpen}
+                    onClose={() => setBridgeModalOpen(false)}
+                    mode="outbound"
+                />
+            )}
         </div>
     );
 }

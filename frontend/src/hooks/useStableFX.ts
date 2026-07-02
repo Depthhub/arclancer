@@ -7,6 +7,11 @@ import { CONTRACTS } from '@/lib/contracts';
 // Fallback rates used when StableFX contract is not deployed on the current chain.
 // When a contract address is provided, the hook first tries on-chain previewConversion().
 // Docs: https://developers.circle.com/stablefx
+//
+// Why this exists:
+// - ArcLancer supports "client pays in USDC, freelancer receives in local currency" UX.
+// - StableFX provides RFQ + onchain settlement patterns on Arc; onchain quoting can be used
+//   to preview conversion outcomes and fees for transparency before payout.
 const MOCK_RATES: Record<string, number> = {
     'USDC-USDC': 1.0,
     'USDC-EURC': 0.92,
@@ -39,6 +44,8 @@ export function useStableFXRate(
                     const { ESCROW_ABI } = await import('@/lib/contracts');
 
                     // Use previewConversion for milestone 0 as a rate indicator
+                    // This is a lightweight on-chain "price preview" to show an estimated conversion.
+                    // It avoids offchain rate oracles and keeps the user-facing quote tied to chain state.
                     const result = await readContract(wagmiConfig, {
                         address: contractAddress,
                         abi: ESCROW_ABI,
@@ -64,6 +71,7 @@ export function useStableFXRate(
             }
 
             // Mock fallback for development / when StableFX isn't deployed
+            // This keeps the UI usable in dev/testnet scenarios where StableFX contracts aren't available.
             const pairKey = `${fromCurrency}-${toCurrency}`;
             const rate = MOCK_RATES[pairKey] || 1.0;
 

@@ -1,6 +1,10 @@
 # Telegram Deal Copilot (ArcLancer) — Full In-Telegram Experience
 
 Users NEVER leave Telegram. The bot manages wallets, drafts deals, deploys contracts, and executes the full escrow lifecycle — all via chat commands.
+//
+// Arc/Circle integration notes:
+// - Arc Testnet is stablecoin-native (USDC as gas) and uses ArcScan for block exploration.
+// - Circle provides the faucet used for test USDC funding flows during development/testing.
 
 ## Architecture
 
@@ -134,3 +138,4 @@ src/app/api/
 - If Upstash is not configured, wallet state uses in-memory storage (lost on cold start!)
 - Bot does NOT custody funds — user controls the wallet and can export the key
 - Transactions on Arc Testnet are free (gas is USDC)
+  - Note: in production, gas is not "free" — it is stablecoin-denominated (predictable) rather than volatile.

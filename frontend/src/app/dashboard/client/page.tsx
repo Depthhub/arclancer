@@ -12,6 +12,7 @@ import { useUserContracts, useContractDetails } from '@/hooks/useContracts';
 import { ContractStatus, ContractDetails } from '@/types';
 import { ESCROW_ABI } from '@/lib/contracts';
 import { ArrowLeft, User, Wallet, Plus, Filter, RefreshCw } from 'lucide-react';
+import { BridgeUsdcCard } from '@/components/cctp/BridgeUsdcCard';
 
 type StatusFilter = 'ALL' | ContractStatus;
 
@@ -127,6 +128,10 @@ export default function ClientContractsPage() {
                             </Button>
                         </Link>
                     </div>
+                </div>
+
+                <div className="mb-8">
+                    <BridgeUsdcCard mode="inbound" />
                 </div>
 
                 {/* Filters */}

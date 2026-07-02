@@ -60,7 +60,10 @@ NEXT_PUBLIC_ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
 NEXT_PUBLIC_PINATA_JWT=your-pinata-jwt (optional)
 NEXT_PUBLIC_PINATA_GATEWAY=gateway.pinata.cloud (optional)
+NEXT_PUBLIC_CCTP_UI_ENABLED=true
 ```
+
+Set `NEXT_PUBLIC_CCTP_UI_ENABLED=true` to show the Circle CCTP bridge UI (mock flow for demos; no real Bridge Kit txs yet). Omit or set to `false` in production until the SDK is wired.
 
 #### Step 5: Redeploy
 

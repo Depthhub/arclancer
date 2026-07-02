@@ -1,6 +1,15 @@
 // Contract Addresses
-// Arc Testnet official addresses: https://docs.arc.network/arc/references/contract-addresses
+//
+// Arc Testnet official addresses (USDC/EURC + crosschain + StableFX references):
+// https://docs.arc.network/arc/references/contract-addresses
+//
+// Note on Arc stablecoins:
+// - Arc uses USDC as the native gas token (stable fee design).
+// - The optional USDC ERC-20 interface at 0x3600… is commonly used for allowance/approve flows.
+//   Docs: https://docs.arc.network/arc/concepts/stable-fee-design
 export const CONTRACTS = {
+    // `.trim()` is defensive: Vercel/PowerShell env injection can add whitespace/newlines,
+    // and viem will reject addresses with trailing whitespace (checksum mismatch / invalid length).
     FACTORY: (process.env.NEXT_PUBLIC_FACTORY_ADDRESS?.trim() || '0x9b48008e55232E9b61886417b79a881f0A71568F') as `0x${string}`,
     USDC: (process.env.NEXT_PUBLIC_USDC_ADDRESS?.trim() || '0x3600000000000000000000000000000000000000') as `0x${string}`,
     EURC: (process.env.NEXT_PUBLIC_EURC_ADDRESS?.trim() || '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a') as `0x${string}`,
@@ -56,6 +65,7 @@ export const REGISTRY_ABI = [
 ] as const;
 
 // EscrowFactory ABI
+// Creates milestone escrow contracts and calculates the ArcLancer platform fee on-chain.
 export const FACTORY_ABI = [
     {
         type: 'constructor',
@@ -131,6 +141,11 @@ export const FACTORY_ABI = [
 ] as const;
 
 // EscrowContract ABI
+// Core escrow lifecycle:
+// - fundContract(): client funds escrow with USDC
+// - submitMilestone(): freelancer submits deliverable (IPFS CID)
+// - approveMilestone()/autoApproveMilestone(): client approval or time-based auto approval
+// - releaseMilestonePayment(): releases funds to freelancer, potentially after StableFX payout currency selection
 export const ESCROW_ABI = [
     {
         type: 'function',
@@ -375,6 +390,8 @@ export const ESCROW_ABI = [
 ] as const;
 
 // ERC20 ABI (for USDC approval)
+// Arc exposes an optional USDC ERC-20 interface used for allowance/approve flows.
+// Address is typically 0x3600… on Arc Testnet. (See Arc contract addresses docs.)
 export const ERC20_ABI = [
     {
         type: 'function',
@@ -423,7 +440,9 @@ export const ERC20_ABI = [
 ] as const;
 
 // Supported currencies for StableFX
-// Docs: https://docs.arc.network/arc/references/contract-addresses
+// In production this should reflect the StableFX-supported set and real token addresses.
+// Docs (Arc): https://docs.arc.network/arc/references/contract-addresses
+// Docs (Circle StableFX): https://developers.circle.com/stablefx
 export const SUPPORTED_CURRENCIES = [
     { code: 'USDC', name: 'US Dollar', flag: '🇺🇸', address: CONTRACTS.USDC },
     { code: 'EURC', name: 'Euro', flag: '🇪🇺', address: CONTRACTS.EURC },

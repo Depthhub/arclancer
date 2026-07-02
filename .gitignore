@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!**/.env.example
 
 # OS files
 .DS_Store
@@ -33,3 +34,7 @@ yarn-error.log*
 
 .vercel
 .env*.local
+
+# Local tooling downloads
+doctl.zip
+doctl_bin/

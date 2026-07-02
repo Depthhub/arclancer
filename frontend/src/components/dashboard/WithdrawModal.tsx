@@ -10,6 +10,7 @@ import { formatUSDC } from '@/lib/utils';
 import { X, CheckCircle, AlertCircle, Loader2, ChevronDown, ArrowRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { useTransactionToast } from '@/hooks/useTransactionToast';
+import { isCctpUiEnabled } from '@/lib/cctp/featureFlag';
 
 // StableFX ABI for getting rates
 const STABLEFX_ABI = [
@@ -24,6 +25,10 @@ const STABLEFX_ABI = [
 
 // Available currencies on Arc Network
 // Docs: https://docs.arc.network/arc/references/contract-addresses
+//
+// Why: ArcLancer supports "withdraw in local currency" UX. On Arc, StableFX patterns can be used to settle FX
+// on-chain. In this UI we show currency choices + a conversion preview; the actual conversion depends on the
+// escrow contract implementation (e.g. setPayoutCurrency + releaseMilestonePayment).
 const CURRENCIES = [
     { symbol: 'USDC', name: 'US Dollar Coin', address: CONTRACTS.USDC, icon: '🇺🇸', rate: 1.0 },
     { symbol: 'EURC', name: 'Euro Coin', address: CONTRACTS.EURC, icon: '🇪🇺', rate: 0.92 },
@@ -45,9 +50,10 @@ interface WithdrawModalProps {
     isOpen: boolean;
     onClose: () => void;
     approvedMilestones: ApprovedMilestone[];
+    onBridgeUsdcClick?: () => void;
 }
 
-export function WithdrawModal({ isOpen, onClose, approvedMilestones }: WithdrawModalProps) {
+export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsdcClick }: WithdrawModalProps) {
     const { address } = useAccount();
     const [selectedMilestones, setSelectedMilestones] = useState<Set<string>>(new Set());
     const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
@@ -428,6 +434,17 @@ export function WithdrawModal({ isOpen, onClose, approvedMilestones }: WithdrawM
                                 )}
                             </Button>
                         </div>
+                        {isCctpUiEnabled() && onBridgeUsdcClick && (
+                            <p className="text-center pt-2">
+                                <button
+                                    type="button"
+                                    onClick={onBridgeUsdcClick}
+                                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                                >
+                                    Bridge USDC to another chain
+                                </button>
+                            </p>
+                        )}
                     </div>
                 )}
             </Card>
