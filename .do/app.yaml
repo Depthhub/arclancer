@@ -11,7 +11,7 @@ services:
     http_port: 3000
     envs:
       - key: NEXT_PUBLIC_APP_URL
-        value: "${frontend.PUBLIC_URL}"
+        value: "https://arclancer-58ipp.ondigitalocean.app"
         scope: RUN_AND_BUILD_TIME
       - key: NEXT_PUBLIC_CCTP_UI_ENABLED
         value: "true"
