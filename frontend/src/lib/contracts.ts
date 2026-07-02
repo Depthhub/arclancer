@@ -10,7 +10,7 @@
 export const CONTRACTS = {
     // `.trim()` is defensive: Vercel/PowerShell env injection can add whitespace/newlines,
     // and viem will reject addresses with trailing whitespace (checksum mismatch / invalid length).
-    FACTORY: (process.env.NEXT_PUBLIC_FACTORY_ADDRESS?.trim() || '0x9b48008e55232E9b61886417b79a881f0A71568F') as `0x${string}`,
+    FACTORY: (process.env.NEXT_PUBLIC_FACTORY_ADDRESS?.trim() || '0x0ADf70A390868c7016697edF0640791c3B3e5f31') as `0x${string}`,
     USDC: (process.env.NEXT_PUBLIC_USDC_ADDRESS?.trim() || '0x3600000000000000000000000000000000000000') as `0x${string}`,
     EURC: (process.env.NEXT_PUBLIC_EURC_ADDRESS?.trim() || '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a') as `0x${string}`,
     STABLEFX: (process.env.NEXT_PUBLIC_STABLEFX_ADDRESS?.trim() || '0x1f91886C7028986aD885ffCee0e40b75C9cd5aC1') as `0x${string}`,
