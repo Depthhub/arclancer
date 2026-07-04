@@ -107,6 +107,23 @@ export default function CreateContractClient() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
+    // Prefill from agent hire flow (?freelancer=...&totalAmount=...)
+    useEffect(() => {
+        const freelancer = searchParams.get('freelancer');
+        if (!freelancer) return;
+
+        setValue('freelancerAddress', freelancer);
+        const total = searchParams.get('totalAmount');
+        if (total) setValue('totalAmount', total);
+
+        const m0 = searchParams.get('milestone0');
+        const m0amt = searchParams.get('milestone0Amount');
+        if (m0 || m0amt) {
+            setValue('milestones.0.description', m0 || '');
+            if (m0amt) setValue('milestones.0.amount', m0amt);
+        }
+    }, [searchParams, setValue]);
+
     const watchTotalAmount = watch('totalAmount');
     const watchPayoutCurrency = watch('payoutCurrency');
     const watchMilestones = watch('milestones');

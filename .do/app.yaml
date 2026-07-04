@@ -16,6 +16,12 @@ services:
       - key: NEXT_PUBLIC_CCTP_UI_ENABLED
         value: "true"
         scope: RUN_AND_BUILD_TIME
+      - key: NEXT_PUBLIC_AGENTS_UI_ENABLED
+        value: "true"
+        scope: RUN_AND_BUILD_TIME
+      - key: NEXT_PUBLIC_REGISTRY_ADDRESS
+        value: "0x28c87a31a6e608dbf90839d10567ed44e7e3bbd1"
+        scope: RUN_AND_BUILD_TIME
       - key: NEXT_PUBLIC_FACTORY_ADDRESS
         value: "0x0ADf70A390868c7016697edF0640791c3B3e5f31"
         scope: RUN_AND_BUILD_TIME

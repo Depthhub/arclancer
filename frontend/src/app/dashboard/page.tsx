@@ -22,6 +22,7 @@ import {
 } from '@/components/dashboard';
 import { BridgeUsdcModal } from '@/components/cctp/BridgeUsdcModal';
 import { isCctpUiEnabled } from '@/lib/cctp/featureFlag';
+import { isAgentsUiEnabled } from '@/lib/agents/featureFlag';
 import type { PendingAction, ActiveContract } from '@/components/dashboard';
 import type { MilestoneDetails } from '@/components/dashboard/MilestoneDetailsDrawer';
 import { Plus, Wallet } from 'lucide-react';
@@ -216,6 +217,24 @@ export default function DashboardPage() {
                                         <p className="text-sm text-neutral-500">View all as freelancer</p>
                                     </Card>
                                 </Link>
+                                {isAgentsUiEnabled() && (
+                                    <Link href="/dashboard/agents">
+                                        <Card variant="interactive" padding="md" className="text-center group">
+                                            <Icon icon="solar:cpu-bolt-linear" width={32} className="text-violet-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                                            <p className="font-medium text-neutral-900">My Agents</p>
+                                            <p className="text-sm text-neutral-500">Agents you created</p>
+                                        </Card>
+                                    </Link>
+                                )}
+                                {isAgentsUiEnabled() && (
+                                    <Link href="/agents">
+                                        <Card variant="interactive" padding="md" className="text-center group">
+                                            <Icon icon="solar:shop-linear" width={32} className="text-violet-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+                                            <p className="font-medium text-neutral-900">Agent Marketplace</p>
+                                            <p className="text-sm text-neutral-500">Browse AI agents</p>
+                                        </Card>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>

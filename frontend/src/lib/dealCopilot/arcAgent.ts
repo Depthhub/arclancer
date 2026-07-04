@@ -346,7 +346,7 @@ export async function lookupAgentIdentity(agentIdOrAddress: string): Promise<{
 export const AGENTIC_COMMERCE_CONTRACT = "0x0747EEf0706327138c69792bF28Cd525089e4583" as Address;
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as Address;
 
-const AGENTIC_COMMERCE_ABI = [
+export const AGENTIC_COMMERCE_ABI = [
   {
     name: "createJob",
     type: "function",
@@ -568,7 +568,14 @@ export async function fundAgenticJob(
       args: [AGENTIC_COMMERCE_CONTRACT, budgetMicro],
     });
 
-    // Set budget (provider does this normally, but for our bot we handle both sides)
+    // Set budget before funding (ERC-8183 requirement)
+    await wallet.writeContract({
+      address: AGENTIC_COMMERCE_CONTRACT,
+      abi: AGENTIC_COMMERCE_ABI,
+      functionName: "setBudget",
+      args: [BigInt(jobId), budgetMicro, "0x" as `0x${string}`],
+    });
+
     // Fund escrow
     const fundHash = await wallet.writeContract({
       address: AGENTIC_COMMERCE_CONTRACT,

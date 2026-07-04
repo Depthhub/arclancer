@@ -168,45 +168,8 @@ export async function fetchUserContracts(walletAddress: string): Promise<string[
  * Fetch all registered AI agents from the AgentRegistry contract.
  */
 export async function fetchRegisteredAgents(): Promise<OnchainAgent[]> {
-    const client = getClient();
-    const agents: OnchainAgent[] = [];
-    
-    // The public RPC fails with 413 on getLogs ranges > 10,000 blocks. 
-    // We try querying sequentially until we hit an empty string for the name
-    for (let i = 1; i < 100; i++) { // cap at 100 for safety
-        try {
-            const data = await client.readContract({
-                address: CONTRACTS.REGISTRY as Address,
-                abi: REGISTRY_ABI,
-                functionName: "agents",
-                args: [BigInt(i)],
-            }) as [string, string, string, bigint, boolean];
-            
-            const [name, skill, toolName, taskFee, isActive] = data;
-            if (!name) break; // if name is empty, we reached the end
-            
-            const ownerAddress = await client.readContract({
-                address: CONTRACTS.REGISTRY as Address,
-                abi: REGISTRY_ABI,
-                functionName: "ownerOf",
-                args: [BigInt(i)],
-            }) as string;
-            
-            agents.push({
-                id: i,
-                name,
-                skill,
-                toolName,
-                taskFee: Number(taskFee) / 1e6,
-                isActive,
-                ownerAddress
-            });
-        } catch {
-            break; // EVM revert or bounds error
-        }
-    }
-    
-    return agents;
+    const { fetchRegisteredAgents: fetchAgents } = await import("@/lib/agents/registry");
+    return fetchAgents();
 }
 
 /* ------------------------------------------------------------------ */

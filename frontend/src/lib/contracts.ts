@@ -52,6 +52,17 @@ export const REGISTRY_ABI = [
         stateMutability: 'view',
     },
     {
+        type: 'function',
+        name: 'updateAgent',
+        inputs: [
+            { name: 'agentId', type: 'uint256' },
+            { name: 'newFee', type: 'uint256' },
+            { name: 'newIsActive', type: 'bool' },
+        ],
+        outputs: [],
+        stateMutability: 'nonpayable',
+    },
+    {
         type: 'event',
         name: 'AgentRegistered',
         inputs: [
