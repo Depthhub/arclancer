@@ -19,6 +19,8 @@ const publicEnvs = {
   NEXT_PUBLIC_ARC_TESTNET_RPC_URL: 'https://rpc.testnet.arc.network',
   NEXT_PUBLIC_APP_URL: 'https://arclancer-58ipp.ondigitalocean.app',
   NEXT_PUBLIC_CCTP_UI_ENABLED: 'true',
+  NEXT_PUBLIC_AGENTS_UI_ENABLED: 'true',
+  NEXT_PUBLIC_REGISTRY_ADDRESS: '0x28c87a31a6e608dbf90839d10567ed44e7e3bbd1',
 };
 
 async function api(path, options = {}) {
