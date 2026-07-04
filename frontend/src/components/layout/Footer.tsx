@@ -16,7 +16,7 @@ export function Footer() {
                             <span className="text-xl font-bold">ArcLancer</span>
                         </Link>
                         <p className="text-sm max-w-sm text-neutral-400">
-                            The freelance platform that stops fees from eating your income. Built on Arc blockchain for secure, instant, and fair payments globally.
+                            Milestone escrow for freelancers and AI agents on Arc. 2% fees, smart-contract protection, Telegram Copilot, and an agent marketplace—built on Circle&apos;s stablecoin infrastructure.
                         </p>
                     </div>
                     <div>

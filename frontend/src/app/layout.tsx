@@ -15,9 +15,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ArcLancer - Keep 98% of What You Earn",
-  description: "The freelance platform that stops fees from eating your income. Secure milestone escrow and instant global payouts in your local currency.",
-  keywords: ["freelance", "escrow", "blockchain", "Arc", "StableFX", "crypto", "payments"],
+  title: "ArcLancer - Milestone Escrow for Freelancers & AI Agents",
+  description: "Milestone USDC escrow on Arc Testnet for freelancers and AI agents. 2% fees, agent marketplace, Telegram Deal Copilot, and smart-contract protection.",
+  keywords: ["freelance", "escrow", "blockchain", "Arc", "StableFX", "crypto", "payments", "AI agents", "Telegram", "ERC-8183", "CCTP", "AgentRegistry"],
 };
 
 // Inline script to prevent wallet extension conflicts

@@ -11,7 +11,7 @@ export default function HomePage() {
           <div className="z-10 max-w-2xl relative mx-auto lg:mx-0 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 border rounded-full px-3 py-1.5 mb-8 bg-blue-50 border-blue-100">
               <Icon icon="solar:verified-check-linear" width="16" className="text-blue-600" />
-              <span className="text-xs font-semibold tracking-wide uppercase text-blue-700">Built on Arc Blockchain</span>
+              <span className="text-xs font-semibold tracking-wide uppercase text-blue-700">Arc Testnet Beta · Built on Circle Arc</span>
             </div>
 
             {/* Responsive Text Sizing */}
@@ -21,7 +21,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg md:text-xl leading-relaxed text-neutral-500 max-w-lg mb-10 mx-auto lg:mx-0">
-              The freelance platform that stops fees from eating your income. Secure milestone escrow and instant global payouts in your local currency.
+              Milestone escrow for freelancers and AI agents. 2% fees, smart-contract protection, and payouts on Arc—plus hire agents, run tasks, or manage deals from Telegram.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center lg:justify-start">
@@ -36,9 +36,9 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center justify-center lg:justify-start gap-4 text-xs font-medium text-neutral-400">
-              <span className="flex items-center gap-1"><Icon icon="solar:shield-check-linear" className="text-green-500" /> $0 in stuck payments</span>
+              <span className="flex items-center gap-1"><Icon icon="solar:shield-check-linear" className="text-green-500" /> On-chain escrow protection</span>
               <span className="hidden md:block w-1 h-1 rounded-full bg-neutral-300"></span>
-              <span className="flex items-center gap-1"><Icon icon="solar:document-add-linear" /> 2,847 contracts completed</span>
+              <span className="flex items-center gap-1"><Icon icon="solar:document-add-linear" /> Humans + AI agents on one platform</span>
             </div>
           </div>
 
@@ -67,7 +67,7 @@ export default function HomePage() {
                 </div>
                 <div className="mt-4 flex gap-2">
                   <span className="text-[10px] px-2 py-1 rounded-full font-medium bg-green-100 text-green-700">Fee: 2%</span>
-                  <span className="text-[10px] px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">Instant</span>
+                  <span className="text-[10px] px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">On-chain</span>
                 </div>
               </div>
 
@@ -78,7 +78,7 @@ export default function HomePage() {
                       <Icon icon="solar:wallet-money-linear" width="16" />
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-neutral-900">Sent to Bank Account</div>
+                      <div className="text-xs font-semibold text-neutral-900">Released to Wallet on Arc</div>
                       <div className="text-[10px] text-neutral-400">2 seconds ago</div>
                     </div>
                   </div>
@@ -108,7 +108,7 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-neutral-900">
               Freelancing Shouldn&apos;t Cost You <span className="text-red-500">25%</span> of Your Income
             </h2>
-            <p className="text-neutral-500">Stop losing money to hidden fees, conversion markups, and slow payouts.</p>
+            <p className="text-neutral-500">Stop losing money to hidden fees, conversion markups, slow payouts, and middlemen who own your client relationships.</p>
           </div>
 
           {/* Tab View Optimized Grid: 2 columns on tablet, 3 on desktop */}
@@ -187,8 +187,8 @@ export default function HomePage() {
                 <li className="flex items-start gap-3">
                   <Icon icon="solar:check-circle-bold" className="text-blue-500 mt-1 shrink-0" />
                   <div>
-                    <span className="block text-sm font-semibold text-white">0.2% Real FX Rate</span>
-                    <span className="text-xs text-neutral-400">Pay what banks pay.</span>
+                    <span className="block text-sm font-semibold text-white">Hire Freelancers or AI Agents</span>
+                    <span className="text-xs text-neutral-400">Same escrow for humans and registered agents.</span>
                   </div>
                 </li>
               </ul>
@@ -222,7 +222,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Icon icon="solar:bag-heart-linear" className="text-neutral-900" />
-                    <span className="text-xs font-medium text-neutral-700">Save $11,300/yr on $50k revenue</span>
+                    <span className="text-xs font-medium text-neutral-700">Works for human contracts and agent hires</span>
                   </div>
                 </div>
 
@@ -241,7 +241,7 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 border rounded-full px-3 py-1.5 mb-6 shadow-sm bg-white border-neutral-200">
               <Icon icon="solar:rocket-linear" width="16" className="text-neutral-500" />
-              <span className="text-xs font-medium text-neutral-600">Dead Simple</span>
+              <span className="text-xs font-medium text-neutral-600">Web, Wallet, or Telegram</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-neutral-900">
               Three Steps. <span className="text-neutral-400">Zero Middlemen.</span> <br /> Your Money, Your Terms.
@@ -255,7 +255,7 @@ export default function HomePage() {
               <div>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold mb-6 bg-neutral-100 text-neutral-900">1</div>
                 <h3 className="text-xl font-bold mb-2 text-neutral-900">Create Contract</h3>
-                <p className="text-sm text-neutral-500 leading-relaxed">Set milestones and amounts. Terms are locked in a smart contract.</p>
+                <p className="text-sm text-neutral-500 leading-relaxed">Set milestones and amounts with a freelancer wallet, an AI agent owner, or a draft from Telegram Deal Copilot. Terms are locked in a smart contract.</p>
               </div>
               {/* Abstract UI */}
               <div className="mt-6 rounded-xl p-4 border bg-neutral-50 border-neutral-100">
@@ -278,7 +278,7 @@ export default function HomePage() {
               <div className="flex-1 order-2 md:order-1 relative z-10">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold mb-6 bg-neutral-800 text-white">2</div>
                 <h3 className="text-2xl font-bold mb-4">Submit &amp; Deliver</h3>
-                <p className="mb-8 leading-relaxed max-w-sm text-sm lg:text-base text-neutral-400">Upload deliverables. Client has 7 days to review. No response? Payment auto-approves.</p>
+                <p className="mb-8 leading-relaxed max-w-sm text-sm lg:text-base text-neutral-400">Upload deliverables anchored to IPFS when configured. Client has 7 days to review. No response? Payment auto-approves.</p>
                 <div className="flex items-center gap-2 text-sm text-green-400">
                   <Icon icon="solar:clock-circle-linear" />
                   <span>Auto-release timer active</span>
@@ -310,8 +310,8 @@ export default function HomePage() {
             <div className="md:col-span-3 rounded-[2rem] p-8 md:p-8 lg:p-12 border shadow-sm flex flex-col md:flex-row items-center gap-12 bg-white border-neutral-100">
               <div className="flex-1">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold mb-6 bg-neutral-100 text-neutral-900">3</div>
-                <h3 className="text-2xl font-bold mb-4 text-neutral-900">Instant Payout, Your Currency</h3>
-                <p className="text-neutral-500 mb-8 leading-relaxed max-w-lg">Convert to Brazilian Real, Mexican Peso, or 6 other currencies. Receive in seconds, not weeks. Cash out to your bank in under an hour.</p>
+                <h3 className="text-2xl font-bold mb-4 text-neutral-900">Get Paid on Arc—Convert When You Need To</h3>
+                <p className="text-neutral-500 mb-8 leading-relaxed max-w-lg">Approve milestones and receive USDC in seconds. Preview StableFX conversion to EURC or local stablecoins. Bridge USDC in via CCTP when funding from other chains.</p>
                 <Link href="/create" className="font-semibold text-sm flex items-center gap-2 group text-neutral-900">
                   Create First Contract Free
                   <Icon icon="solar:arrow-right-linear" className="group-hover:translate-x-1 transition-transform" />
@@ -327,23 +327,23 @@ export default function HomePage() {
                   <div className="flex items-center justify-between p-3 rounded-xl border bg-white border-neutral-200">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg bg-green-100">🇧🇷</div>
-                      <span className="text-sm font-medium">BRL (Pix)</span>
+                      <span className="text-sm font-medium">BRL (BRLA)</span>
                     </div>
-                    <span className="text-xs font-semibold text-green-600">0% Fee</span>
+                    <span className="text-xs font-semibold text-green-600">StableFX preview</span>
                   </div>
                   <div className="flex items-center justify-between p-3 rounded-xl border bg-white border-neutral-200">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg bg-red-100">🇲🇽</div>
-                      <span className="text-sm font-medium">MXN (SPEI)</span>
+                      <span className="text-sm font-medium">MXN (MXNB)</span>
                     </div>
-                    <span className="text-xs font-semibold text-green-600">0% Fee</span>
+                    <span className="text-xs font-semibold text-green-600">StableFX preview</span>
                   </div>
                   <div className="flex items-center justify-between p-3 rounded-xl border bg-white border-neutral-200">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg bg-yellow-100">🇵🇭</div>
-                      <span className="text-sm font-medium">PHP (InstaPay)</span>
+                      <span className="text-sm font-medium">PHP (PHPC)</span>
                     </div>
-                    <span className="text-xs font-semibold text-green-600">0% Fee</span>
+                    <span className="text-xs font-semibold text-green-600">Coming soon</span>
                   </div>
                 </div>
               </div>
@@ -356,7 +356,7 @@ export default function HomePage() {
       <section className="py-24 px-6 bg-neutral-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-neutral-900">Everything Upwork Should Have Been</h2>
+            <h2 className="text-3xl font-bold text-neutral-900">Everything Upwork Should Have Been—Plus an Agent Economy</h2>
           </div>
           {/* Grid optimized for Tablet: 2 cols on md, 3 on lg */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -366,15 +366,15 @@ export default function HomePage() {
                 <Icon icon="solar:shield-check-linear" width="24" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-neutral-900">Milestone-Based Escrow</h3>
-              <p className="text-sm text-neutral-500 leading-relaxed">Client funds the contract upfront. Money releases only when you deliver. No more &quot;I&apos;ll pay next week&quot;.</p>
+              <p className="text-sm text-neutral-500 leading-relaxed">Client funds the contract upfront on Arc. Money releases only when you deliver. No more &quot;I&apos;ll pay next week&quot;.</p>
             </div>
             {/* Feature 2 */}
             <div className="p-8 rounded-3xl border shadow-sm hover:shadow-md transition-shadow bg-white border-neutral-100">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-green-50 text-green-600">
                 <Icon icon="solar:globe-linear" width="24" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-neutral-900">Multi-Currency Payouts</h3>
-              <p className="text-sm text-neutral-500 leading-relaxed">Get paid in BRL, MXN, PHP and 5 more. Real exchange rates, not a 5% markup.</p>
+              <h3 className="text-lg font-bold mb-2 text-neutral-900">AI Agent Marketplace</h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">Browse, register, and hire agents with the same milestone escrow you use for human freelancers.</p>
             </div>
             {/* Feature 3 */}
             <div className="p-8 rounded-3xl border shadow-sm hover:shadow-md transition-shadow bg-white border-neutral-100">
@@ -389,16 +389,16 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-neutral-100 text-neutral-600">
                 <Icon icon="solar:incognito-linear" width="24" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-neutral-900">Privacy-First Transactions</h3>
-              <p className="text-sm text-neutral-500 leading-relaxed">Optional confidential payments. Competitors can&apos;t see your rates or clients.</p>
+              <h3 className="text-lg font-bold mb-2 text-neutral-900">Telegram Deal Copilot</h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">Create, fund, submit, approve, and withdraw from chat—no website required.</p>
             </div>
             {/* Feature 5 */}
             <div className="p-8 rounded-3xl border shadow-sm hover:shadow-md transition-shadow bg-white border-neutral-100">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-yellow-50 text-yellow-600">
                 <Icon icon="solar:bolt-linear" width="24" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-neutral-900">Instant Settlement</h3>
-              <p className="text-sm text-neutral-500 leading-relaxed">No 14-day holds. Payments settle in under 2 seconds. Bills are due now, not later.</p>
+              <h3 className="text-lg font-bold mb-2 text-neutral-900">Instant On-Chain Settlement</h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">USDC releases in seconds after approval—not 14-day platform holds. Bills are due now, not later.</p>
             </div>
             {/* Feature 6 */}
             <div className="p-8 rounded-3xl border shadow-sm hover:shadow-md transition-shadow bg-white border-neutral-100">
@@ -418,10 +418,10 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 border rounded-full px-3 py-1.5 mb-6 bg-neutral-50 border-neutral-100">
               <Icon icon="solar:users-group-rounded-linear" width="16" className="text-neutral-500" />
-              <span className="text-xs font-medium text-neutral-600">Join the movement</span>
+              <span className="text-xs font-medium text-neutral-600">Live on Arc Testnet</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-neutral-900">
-              Freelancers Are Already <span className="text-neutral-400">Saving Thousands</span>
+              Built for Freelancers and the <span className="text-neutral-400">Agent Economy</span>
             </h2>
           </div>
 
@@ -438,7 +438,7 @@ export default function HomePage() {
                   <Icon icon="solar:star-bold" width="16" />
                 </div>
                 <p className="text-sm font-medium leading-relaxed text-neutral-700">
-                  &quot;I made $47,000 last year on Upwork. They took $9,400. This year on ArcLancer, I&apos;ll save $8,460. That&apos;s a new car.&quot;
+                  &quot;On Upwork I lose 20% on every project. On ArcLancer it&apos;s 2%—same work, same clients, but I keep thousands more every year.&quot;
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -449,7 +449,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t text-xs font-semibold border-neutral-200 text-green-600">
-                💰 Saved $8,460 in 7 months
+                💰 2% fee vs 20% on traditional platforms
               </div>
             </div>
 
@@ -490,31 +490,31 @@ export default function HomePage() {
                   <Icon icon="solar:star-bold" width="16" />
                 </div>
                 <p className="text-sm font-medium leading-relaxed text-neutral-700">
-                  &quot;Getting paid in pesos instead of USD saved me 4% on every project. Plus instant payout. I&apos;ll never go back.&quot;
+                  &quot;Hired an AI agent through the same milestone escrow I use for freelancers. Fund, deliver, approve—one workflow for humans and agents.&quot;
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold bg-neutral-200">CM</div>
                 <div>
                   <div className="text-sm font-bold text-neutral-900">Carlos Mendoza</div>
-                  <div className="text-xs text-neutral-500">Content Writer, Manila</div>
+                  <div className="text-xs text-neutral-500">Product Manager, Manila</div>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t text-xs font-semibold border-neutral-200 text-green-600">
-                🌎 Average savings: $180/project
+                🤖 Agent hire via milestone escrow
               </div>
             </div>
           </div>
 
           {/* Stats Bar */}
           <div className="rounded-xl p-6 flex flex-wrap justify-center md:justify-between items-center gap-4 text-xs md:text-sm font-medium bg-neutral-100 text-neutral-600">
-            <span className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> $2.4M+ Total Paid Out</span>
+            <span className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> 2% On-Chain Platform Fee</span>
             <span className="hidden md:block text-neutral-300">•</span>
-            <span>2,847 Contracts Completed</span>
+            <span>7-Day Auto-Approve</span>
             <span className="hidden md:block text-neutral-300">•</span>
-            <span>98% Success Rate</span>
+            <span>AI Agents + Human Escrow</span>
             <span className="hidden md:block text-neutral-300">•</span>
-            <span>&lt;2 min Avg. Payout Time</span>
+            <span>Telegram + Web Dashboards</span>
           </div>
         </div>
       </section>
@@ -552,17 +552,17 @@ export default function HomePage() {
               </tr>
               <tr className="hover:bg-neutral-50/50">
                 <td className="px-6 py-4 font-medium text-neutral-900">Currency Conversion</td>
-                <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/30">0.2%</td>
+                <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/30">StableFX preview</td>
                 <td className="px-6 py-4 text-neutral-500">5%</td>
                 <td className="px-6 py-4 text-neutral-500">3%</td>
                 <td className="px-6 py-4 text-neutral-500">4%</td>
               </tr>
               <tr className="hover:bg-neutral-50/50">
-                <td className="px-6 py-4 font-medium text-neutral-900">Wire Fee</td>
-                <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/30">$0.001</td>
-                <td className="px-6 py-4 text-neutral-500">$30-50</td>
-                <td className="px-6 py-4 text-neutral-500">$40</td>
-                <td className="px-6 py-4 text-neutral-500">$45</td>
+                <td className="px-6 py-4 font-medium text-neutral-900">AI Agent Support</td>
+                <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/30">Hire + pay agents</td>
+                <td className="px-6 py-4 text-neutral-500">None</td>
+                <td className="px-6 py-4 text-neutral-500">None</td>
+                <td className="px-6 py-4 text-neutral-500">None</td>
               </tr>
               <tr className="bg-neutral-900 text-white">
                 <td className="px-6 py-4 font-medium">Example $5k Project <span className="text-xs font-normal text-neutral-400">Take Home Pay</span></td>
@@ -579,7 +579,8 @@ export default function HomePage() {
       {/* Calculator Section */}
       <section id="calculator" className="py-24 px-6 rounded-[3rem] mx-4 md:mx-6 mb-12 bg-neutral-900 text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-12">See How Much You&apos;ll Save</h2>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">See How Much You&apos;ll Save</h2>
+          <p className="text-neutral-400 mb-12 max-w-xl mx-auto">Same 2% fee whether you pay a freelancer or an AI agent.</p>
 
           <div className="rounded-3xl p-8 md:p-12 border shadow-2xl bg-neutral-800 border-neutral-700">
             {/* Inputs */}
@@ -664,9 +665,9 @@ export default function HomePage() {
             <div className="text-4xl mb-6">🇧🇷</div>
             <h3 className="text-xl font-bold mb-4 text-neutral-900">For Brazilian Freelancers</h3>
             <ul className="space-y-3 mb-8">
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Receive in BRLA (Stablecoin)</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Cash out via PIX in 10 mins</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Save R$23,000/year avg</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Convert to BRLA via StableFX preview</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Bank PIX rails coming soon</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Up to R$23,000/year in fee savings</li>
             </ul>
             <Link href="/create" className="font-semibold text-sm hover:underline text-blue-600">Criar Meu Primeiro Contrato →</Link>
           </div>
@@ -676,9 +677,9 @@ export default function HomePage() {
             <div className="text-4xl mb-6">🇲🇽</div>
             <h3 className="text-xl font-bold mb-4 text-neutral-900">For Mexican Freelancers</h3>
             <ul className="space-y-3 mb-8">
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Receive in MXNB (Stablecoin)</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Cash out via SPEI transfer</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Save MXN$197k/year avg</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Convert to MXNB via StableFX preview</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Bank SPEI rails coming soon</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Up to MXN$197k/year in fee savings</li>
             </ul>
             <Link href="/create" className="font-semibold text-sm hover:underline text-green-600">Crear Mi Primer Contrato →</Link>
           </div>
@@ -688,9 +689,9 @@ export default function HomePage() {
             <div className="text-4xl mb-6">🇵🇭</div>
             <h3 className="text-xl font-bold mb-4 text-neutral-900">For Filipino Freelancers</h3>
             <ul className="space-y-3 mb-8">
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Receive in PHPC (Stablecoin)</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Cash out via InstaPay</li>
-              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Save ₱493k/year avg</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Convert to PHPC via StableFX preview</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> InstaPay bank rails coming soon</li>
+              <li className="flex gap-2 text-sm text-neutral-500"><Icon icon="solar:check-circle-linear" className="text-green-500 mt-0.5" /> Up to ₱493k/year in fee savings</li>
             </ul>
             <Link href="/create" className="font-semibold text-sm hover:underline text-yellow-600">Gumawa ng Unang Kontrata →</Link>
           </div>
@@ -720,7 +721,7 @@ export default function HomePage() {
                   </span>
                 </summary>
                 <p className="text-neutral-500 text-sm mt-4 leading-relaxed">
-                  Nope. You need to understand: Client pays → You deliver → You get money. That&apos;s it. Everything else runs in the background.
+                  Nope. You need to understand: Client pays → You deliver → You get money. That&apos;s it. Or use Telegram Deal Copilot with a bot-managed wallet—everything else runs in the background.
                 </p>
               </details>
             </div>
@@ -734,7 +735,7 @@ export default function HomePage() {
                   </span>
                 </summary>
                 <p className="text-neutral-500 text-sm mt-4 leading-relaxed">
-                  We partner with local exchanges in your country. One click transfers your stablecoin to your bank. Takes 10 to 30 minutes depending on your bank. Supported: Brazil, Mexico, Philippines, Canada, Australia, Japan, Korea + more.
+                  Today you receive USDC on Arc after milestone approval. Preview StableFX conversion to EURC or local stablecoins. Local bank off-ramps for Brazil, Mexico, Philippines, and more are on the roadmap.
                 </p>
               </details>
             </div>
@@ -748,7 +749,7 @@ export default function HomePage() {
                   </span>
                 </summary>
                 <p className="text-neutral-500 text-sm mt-4 leading-relaxed">
-                  Built-in arbitration. Both parties agree on an arbitrator, or we provide one. They review the work and decide. Escrow releases to the winner. Fair and fast.
+                  Initiating a dispute freezes the contract on-chain—no further payments move until resolved. Parties negotiate off-chain or agree on an arbitrator. Full automated arbitration is on the roadmap.
                 </p>
               </details>
             </div>
@@ -756,13 +757,13 @@ export default function HomePage() {
             <div className="rounded-2xl px-8 py-6 shadow-sm border bg-white border-neutral-100">
               <details className="group">
                 <summary className="flex justify-between items-center cursor-pointer list-none">
-                  <span className="font-bold text-neutral-900">Is my money safe?</span>
+                  <span className="font-bold text-neutral-900">Can I hire AI agents?</span>
                   <span className="transition group-open:rotate-180">
                     <Icon icon="solar:alt-arrow-down-linear" width="20" />
                   </span>
                 </summary>
                 <p className="text-neutral-500 text-sm mt-4 leading-relaxed">
-                  Safer than Upwork. Your money sits in a smart contract that cannot be changed. Upwork holds funds in a corporate account. We hold nothing. The blockchain holds everything. That&apos;s why we&apos;ve had $0 in stuck or lost payments. Ever.
+                  Yes. Browse the agent marketplace, hire via the same milestone escrow as human freelancers, run pay-per-task jobs, or use ERC-8183 agentic commerce flows—all on Arc Testnet.
                 </p>
               </details>
             </div>
@@ -777,7 +778,7 @@ export default function HomePage() {
             Your Next Project. <span className="text-blue-600">30% More Money</span> in Your Pocket.
           </h2>
           <p className="text-lg text-neutral-500 mb-10">
-            Free to create contracts. Free to get started. You only pay when you get paid. 2%, not 20%.
+            Create escrow for freelancers or AI agents. Free to start—you only pay 2% when work is approved.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
             <Link href="/create" className="px-8 py-4 rounded-full font-bold transition-all shadow-xl bg-neutral-900 text-white hover:bg-neutral-800 shadow-neutral-200">
@@ -789,8 +790,8 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-xs font-medium text-neutral-400">
             <span className="flex items-center gap-1"><Icon icon="solar:check-circle-linear" /> No credit card required</span>
-            <span className="flex items-center gap-1"><Icon icon="solar:check-circle-linear" /> Set up in under 5 minutes</span>
-            <span className="flex items-center gap-1"><Icon icon="solar:check-circle-linear" /> First contract 0% fee (limited time)</span>
+            <span className="flex items-center gap-1"><Icon icon="solar:check-circle-linear" /> Agent marketplace live</span>
+            <span className="flex items-center gap-1"><Icon icon="solar:check-circle-linear" /> Telegram Copilot available</span>
           </div>
         </div>
       </section>
