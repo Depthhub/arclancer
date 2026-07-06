@@ -30,11 +30,11 @@ export async function EstimateBridge(config: BridgeConfig): Promise<BridgeFeeEst
     config: { transferSpeed: config.transferSpeed },
     })
 
-    console.log("cctp estimate result:", result); 
+    
 
     return {
         transferAmount: config.amount,
-        cctpProtocolFee: Number(result.fees[0].amount ?? 0),
+        cctpProtocolFee: Number(result.fees?.[0]?.amount ?? 0),
         sourceGasUsd:  Number(result.gasFees?.[0]?.fees?.fee ?? 0),
         receiveAmount: Number(result.amount),
         transferSpeed: config.transferSpeed,
@@ -105,7 +105,6 @@ export async function ExecuteBridge(
         );
     }
 
-    console.log("cctp bridge result:", result);
     return {
         txHash: result.steps[result.steps.length - 1]['txHash']!,
         explorerUrl: result.steps[result.steps.length - 1]?.explorerUrl ??
