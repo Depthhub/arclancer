@@ -3,15 +3,9 @@ import { getChainById } from './chains';
 import { BridgeKit } from '@circle-fin/bridge-kit'
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 
-const STEP_DELAY_MS = 2200;
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 
 export async function EstimateBridge(config: BridgeConfig): Promise<BridgeFeeEstimate> {
-    await sleep(800);
 
 
     const kit = new BridgeKit()
