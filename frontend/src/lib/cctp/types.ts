@@ -1,5 +1,3 @@
-import type { BridgeChainIdentifier } from "@circle-fin/bridge-kit"
-
 export type BridgeDirection = 'inbound' | 'outbound';
 
 export type TransferSpeed = 'FAST' | 'SLOW';
@@ -15,7 +13,7 @@ export type BridgeUiPhase =
 export type BridgeProgressStep = 'approve' | 'burn' | 'fetchAttestation' | 'mint';
 
 export interface ChainOption {
-    id: BridgeChainIdentifier;
+    id: string;
     label: string;
     chainId: number;
     explorerUrl: string;
@@ -39,8 +37,8 @@ export interface BridgeResult {
 
 export interface BridgeConfig {
     direction: BridgeDirection;
-    fromChainId: BridgeChainIdentifier;
-    toChainId: BridgeChainIdentifier;
+    fromChainId: string;
+    toChainId: string;
     amount: number;
     transferSpeed: TransferSpeed;
 }

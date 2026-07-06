@@ -1,6 +1,6 @@
 import type { BridgeConfig, BridgeFeeEstimate, BridgeProgressStep, BridgeResult } from './types';
-import { getChainById } from './chains';
 import { BridgeKit } from '@circle-fin/bridge-kit'
+import type { BridgeChainIdentifier } from '@circle-fin/bridge-kit'
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 
 
@@ -24,8 +24,8 @@ export async function EstimateBridge(config: BridgeConfig): Promise<BridgeFeeEst
 
     // Execute bridge operation
     const result = await kit.estimate({
-    from: { adapter, chain: config.fromChainId },
-    to: { adapter, chain: config.toChainId},
+    from: { adapter, chain: config.fromChainId as BridgeChainIdentifier },
+    to: { adapter, chain: config.toChainId as BridgeChainIdentifier},
     amount: amount,
     config: { transferSpeed: config.transferSpeed },
     })
@@ -81,10 +81,10 @@ export async function ExecuteBridge(
 
     try {
         result = await kit.bridge({
-            from: { adapter, chain: config.fromChainId },
+            from: { adapter, chain: config.fromChainId as BridgeChainIdentifier },
             to: {
                 adapter,
-                chain: config.toChainId,
+                chain: config.toChainId as BridgeChainIdentifier,
                 useForwarder: true,
             },
             amount,

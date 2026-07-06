@@ -1,5 +1,4 @@
 import type { ChainOption } from './types';
-import type { BridgeChainIdentifier } from "@circle-fin/bridge-kit";
 
 export const ARC_TESTNET_CHAIN: ChainOption = {
     id: 'Arc_Testnet',
@@ -23,14 +22,14 @@ export const SOURCE_CHAINS: ChainOption[] = [
     },
 ];
 
-export function getChainById(id: BridgeChainIdentifier): ChainOption | undefined {
+export function getChainById(id: string): ChainOption | undefined {
     if (id === ARC_TESTNET_CHAIN.id) return ARC_TESTNET_CHAIN;
     return SOURCE_CHAINS.find((c) => c.id === id);
 }
 
 export function defaultFromChain(
     direction: "inbound" | "outbound"
-): BridgeChainIdentifier {
+): string {
     return direction === "inbound"
         ? SOURCE_CHAINS[0].id
         : ARC_TESTNET_CHAIN.id;
@@ -38,7 +37,7 @@ export function defaultFromChain(
 
 export function defaultToChain(
     direction: "inbound" | "outbound"
-): BridgeChainIdentifier {
+): string {
     return direction === "inbound"
         ? ARC_TESTNET_CHAIN.id
         : SOURCE_CHAINS[0].id;
