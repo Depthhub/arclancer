@@ -34,7 +34,7 @@ export async function EstimateBridge(config: BridgeConfig): Promise<BridgeFeeEst
 
     return {
         transferAmount: config.amount,
-        cctpProtocolFee: Number(result.fees),
+        cctpProtocolFee: Number(result.fees[0].amount ?? 0),
         sourceGasUsd:  Number(result.gasFees?.[0]?.fees?.fee ?? 0),
         receiveAmount: Number(result.amount),
         transferSpeed: config.transferSpeed,
