@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const STEPS: { id: BridgeProgressStep; label: string; description: string }[] = [
     { id: 'approve', label: 'Approve USDC', description: 'Allow CCTP to spend USDC on source chain' },
     { id: 'burn', label: 'Burn on source', description: 'USDC burned via Circle CCTP' },
-    { id: 'attestation', label: 'Attestation', description: 'Circle verifies the cross-chain message' },
+    { id: 'fetchAttestation', label: 'Attestation', description: 'Circle verifies the cross-chain message' },
     { id: 'mint', label: 'Mint on destination', description: 'USDC minted to your wallet' },
 ];
 
@@ -56,7 +56,7 @@ export function BridgeProgressStepper({ activeStep, completedSteps }: BridgeProg
 
 export function getCompletedSteps(activeStep: BridgeProgressStep | null): BridgeProgressStep[] {
     if (!activeStep) return [];
-    const order: BridgeProgressStep[] = ['approve', 'burn', 'attestation', 'mint'];
+    const order: BridgeProgressStep[] = ['approve', 'burn', 'fetchAttestation', 'mint'];
     const idx = order.indexOf(activeStep);
     return order.slice(0, idx);
 }

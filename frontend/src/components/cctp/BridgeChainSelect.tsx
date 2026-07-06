@@ -3,6 +3,7 @@
 import { ARC_TESTNET_CHAIN, SOURCE_CHAINS } from '@/lib/cctp/chains';
 import type { ChainOption } from '@/lib/cctp/types';
 import { ChevronDown } from 'lucide-react';
+import type { BridgeChainIdentifier } from "@circle-fin/bridge-kit";
 
 interface BridgeChainSelectProps {
     label: string;

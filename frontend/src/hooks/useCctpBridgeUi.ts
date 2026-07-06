@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { defaultFromChain, defaultToChain } from '@/lib/cctp/chains';
-import { mockEstimateBridge, mockExecuteBridge } from '@/lib/cctp/mockBridge';
+import { EstimateBridge, ExecuteBridge } from '@/lib/cctp/Bridge';
 import type {
     BridgeDirection,
     BridgeFeeEstimate,
@@ -55,7 +55,7 @@ export function useCctpBridgeUi({ mode, suggestedAmount }: UseCctpBridgeUiOption
         setErrorMessage(null);
 
         try {
-            const feeEstimate = await mockEstimateBridge({
+            const feeEstimate = await EstimateBridge({
                 direction: mode,
                 fromChainId,
                 toChainId,
@@ -78,7 +78,7 @@ export function useCctpBridgeUi({ mode, suggestedAmount }: UseCctpBridgeUiOption
         setErrorMessage(null);
 
         try {
-            const bridgeResult = await mockExecuteBridge(
+            const bridgeResult = await ExecuteBridge(
                 {
                     direction: mode,
                     fromChainId,
@@ -90,8 +90,13 @@ export function useCctpBridgeUi({ mode, suggestedAmount }: UseCctpBridgeUiOption
             );
             setResult(bridgeResult);
             setPhase('success');
-        } catch {
-            setErrorMessage('Bridge failed. Please check your wallet and try again.');
+            
+        } catch (error) {
+            console.error('Bridge failed:', error);
+            const errorMsg = error instanceof Error 
+                ? error.message 
+                : `Bridge failed. ${String(error)}`;
+            setErrorMessage(errorMsg);
             setPhase('error');
         }
     }, [parsedAmount, estimate, mode, fromChainId, toChainId, transferSpeed]);
