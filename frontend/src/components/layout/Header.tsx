@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Icon } from '@iconify/react';
 import { Menu, X } from 'lucide-react';
 
@@ -54,7 +54,7 @@ export function Header() {
                 {/* Right Side */}
                 <div className="flex items-center gap-3">
                     <div className="hidden sm:block">
-                        <ConnectButton
+                        <ConnectWalletButton
                             showBalance={false}
                             chainStatus="icon"
                             accountStatus={{
@@ -104,7 +104,7 @@ export function Header() {
                         </nav>
                         <div className="pt-4 border-t border-neutral-100 space-y-3">
                             <div className="sm:hidden">
-                                <ConnectButton />
+                                <ConnectWalletButton />
                             </div>
                             <Link 
                                 href="/create" 

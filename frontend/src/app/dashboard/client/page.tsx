@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useReadContracts } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useReadContracts } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,7 +18,7 @@ import { BridgeUsdcCard } from '@/components/cctp/BridgeUsdcCard';
 type StatusFilter = 'ALL' | ContractStatus;
 
 export default function ClientContractsPage() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected } = useWallet();
     const { contracts, isLoading, refetch } = useUserContracts();
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
@@ -87,7 +88,7 @@ export default function ClientContractsPage() {
                         <p className="text-neutral-500 mb-6">
                             Connect your wallet to view your contracts as a client.
                         </p>
-                        <ConnectButton />
+                        <ConnectWalletButton />
                     </div>
                 </Card>
             </div>

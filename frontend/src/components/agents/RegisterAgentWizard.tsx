@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AgentMetaForm } from './AgentMetaForm';
 import { useRegisterAgent } from '@/hooks/useRegisterAgent';
-import { Bot, CheckCircle, Loader2 } from 'lucide-react';
+import { Bot, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import type { AgentExecutionMode } from '@/lib/agents/types';
 
 export function RegisterAgentWizard() {
-    const { isConnected } = useAccount();
+    const { isConnected } = useWallet();
     const { register, step, error, agentId } = useRegisterAgent();
 
     const [stepNum, setStepNum] = useState(1);
@@ -22,7 +23,10 @@ export function RegisterAgentWizard() {
     const [taskFee, setTaskFee] = useState('');
     const [description, setDescription] = useState('');
     const [skills, setSkills] = useState('');
-    const [systemPrompt, setSystemPrompt] = useState('');
+    const [skillUri, setSkillUri] = useState('');
+    const [contentHash, setContentHash] = useState('');
+    const [executionMode, setExecutionMode] = useState<AgentExecutionMode>('inbox');
+    const [mcpEndpoint, setMcpEndpoint] = useState('');
 
     if (!isConnected) {
         return (
@@ -31,7 +35,7 @@ export function RegisterAgentWizard() {
                     <Bot className="w-12 h-12 text-violet-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold mb-2">Connect Wallet</h2>
                     <p className="text-neutral-500 mb-6">Connect to register an AI agent on Arc.</p>
-                    <ConnectButton />
+                    <ConnectWalletButton />
                 </CardContent>
             </Card>
         );
@@ -63,7 +67,10 @@ export function RegisterAgentWizard() {
             skill,
             toolName: toolName || 'None',
             taskFeeUsdc: parseFloat(taskFee) || 0,
-            systemPrompt,
+            skillUri,
+            contentHash,
+            executionMode,
+            mcpEndpoint,
             description,
             skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
         });
@@ -95,10 +102,16 @@ export function RegisterAgentWizard() {
                 {stepNum === 2 && (
                     <>
                         <AgentMetaForm
-                            systemPrompt={systemPrompt}
+                            skillUri={skillUri}
+                            contentHash={contentHash}
+                            executionMode={executionMode}
+                            mcpEndpoint={mcpEndpoint}
                             description={description}
                             skills={skills}
-                            onSystemPromptChange={setSystemPrompt}
+                            onSkillUriChange={setSkillUri}
+                            onContentHashChange={setContentHash}
+                            onExecutionModeChange={setExecutionMode}
+                            onMcpEndpointChange={setMcpEndpoint}
                             onDescriptionChange={setDescription}
                             onSkillsChange={setSkills}
                             disabled={isBusy}
@@ -106,7 +119,11 @@ export function RegisterAgentWizard() {
                         {error && <p className="text-sm text-red-600">{error}</p>}
                         <div className="flex gap-3">
                             <Button variant="outline" onClick={() => setStepNum(1)} disabled={isBusy}>Back</Button>
-                            <Button onClick={handleSubmit} disabled={isBusy || !systemPrompt} isLoading={isBusy}>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={isBusy || !skillUri || (executionMode === 'creator_mcp' && !mcpEndpoint)}
+                                isLoading={isBusy}
+                            >
                                 {isBusy ? 'Registering on-chain…' : 'Create Agent'}
                             </Button>
                         </div>

@@ -76,8 +76,7 @@ async function processJob(job) {
       toolContext += `[Slither] ${slitherRes.stdout.trim() || slitherRes.stderr}\n\n`;
     }
 
-    // Fetch dynamic agent brain
-    let systemPrompt = "You are an expert CertiQ smart contract auditor running inside a secure container. Read the user's task and any tool outputs, then produce a professional, formatted Markdown audit report.";
+    const systemPrompt = "You are an expert CertiQ smart contract auditor running inside a secure container. Read the user's task and any tool outputs, then produce a professional, formatted Markdown audit report.";
     if (job.agentId) {
       try {
         const metaRes = await fetch(`${REDIS_URL}/get/${encodeURIComponent("agent_meta:" + job.agentId)}`, {
@@ -86,51 +85,21 @@ async function processJob(job) {
         const metaData = await metaRes.json();
         if (metaData && metaData.result) {
           const meta = typeof metaData.result === 'string' ? JSON.parse(metaData.result) : metaData.result;
-          systemPrompt = `Agent Name: ${meta.name}\nSkills: ${meta.skills?.join(", ")}\n\nInstructions:\n${meta.systemPrompt}`;
-          
-          if (meta.skills?.includes("researcher") || meta.skills?.includes("explorer")) {
-             toolContext += "\n[System Tool] Agent has researcher skills enabled. Activating advanced cross-reference mode.\n";
-          }
-
-          // Process Knowledge Skills (External Data/RAG) via URLs
-          if (meta.skills && Array.isArray(meta.skills)) {
-            for (const skill of meta.skills) {
-              if (skill.startsWith("http://") || skill.startsWith("https://")) {
-                try {
-                  // SSRF Protection: Deny local, zero, and AWS/Railway metadata IP addresses
-                  const urlObj = new URL(skill);
-                  const hostname = urlObj.hostname;
-                  const FORBIDDEN_IPS = ["127.0.0.1", "localhost", "0.0.0.0", "169.254.169.254", "::1", "metadata.google.internal"];
-                  if (FORBIDDEN_IPS.includes(hostname) || hostname.startsWith("10.") || hostname.startsWith("192.168.") || hostname.startsWith("172.")) {
-                     throw new Error("SSRF Protection activated. URL domain is forbidden.");
-                  }
-
-                  console.log(`[Poller] Fetching Knowledge Skill from URL: ${skill}`);
-                  const docRes = await fetch(skill);
-                  if (docRes.ok) {
-                    const text = await docRes.text();
-                    // Truncate to reasonable size (e.g. 10k chars) to prevent huge context bloat
-                    const safeText = text.slice(0, 15000);
-                    toolContext += `\n========== KNOWLEDGE SOURCE =================\nLink: ${skill}\nContent snippet:\n${safeText}\n==============================================\n`;
-                    console.log(`[Poller] Successfully injected ${safeText.length} chars of knowledge from ${skill}`);
-                  }
-                } catch (e) {
-                  toolContext += `\n[Warning] Failed to fetch Knowledge Skill from ${skill}: ${e.message}\n`;
-                  console.error(`[Poller] Fetch error for skill ${skill}`, e);
-                }
-              }
-            }
-          }
+          const mode = meta.execution_mode === "creator_mcp" ? "creator_mcp" : "inbox";
+          finalReport = mode === "creator_mcp"
+            ? `Route this task to the creator-hosted MCP endpoint: ${meta.mcp_endpoint || "(missing endpoint)"}. Skill URI: ${meta.skill_uri || "(legacy metadata)"}. ArcLancer did not execute it.`
+            : `Deliver this task to the creator inbox. Skill URI: ${meta.skill_uri || "(legacy metadata)"}. ArcLancer did not execute it.`;
+        } else {
+          finalReport = "Deliver this task to the creator inbox. Agent routing metadata was not found; ArcLancer did not execute it.";
         }
       } catch (e) {
-        console.error("[Poller] Could not fetch specific agent meta", e);
+        finalReport = `Could not resolve agent routing metadata: ${e.message}`;
       }
+    } else {
+      console.log(`[Poller] Generating response using LLM...`);
+      const prompt = `Task: ${job.userText}\n\n${toolContext}\n\nPlease generate a response based on the context provided.`;
+      finalReport = await callLLM(prompt, systemPrompt);
     }
-
-    // Call LLM
-    console.log(`[Poller] Generating response using LLM...`);
-    const prompt = `Task: ${job.userText}\n\n${toolContext}\n\nPlease generate a response based on your agent skills and the context provided.`;
-    finalReport = await callLLM(prompt, systemPrompt);
 
   } catch (e) {
     console.error(`[Poller] Job failed:`, e);

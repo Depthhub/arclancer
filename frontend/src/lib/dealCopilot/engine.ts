@@ -669,62 +669,61 @@ export function handleMessage(
 
   if (state.stage === "collect_agent_skill") {
     draft.agentRegistration = { ...draft.agentRegistration, skill: text };
-    const next: DealCopilotState = { stage: "collect_agent_tool", draft };
+    const next: DealCopilotState = { stage: "collect_agent_system_prompt", draft };
     return {
       nextState: next,
       reply: {
-        text: `What external API or Tool does this agent need to perform its skill?\n\n(Type the name, e.g. \`Dune Analytics\`, \`Twitter API\`, \`GitHub API\`, \`Perplexity\`, or type \`None\` if it only needs base AI intelligence)`,
+        text: `Provide the public **skill URI** for this agent (for example \`ipfs://...\` or an HTTPS manifest URL). ArcLancer stores this pointer but does not fetch or execute it.`,
         parseMode: "Markdown",
       },
     };
   }
 
   if (state.stage === "collect_agent_tool") {
-    if (text.trim().toLowerCase() === "none") {
-      draft.agentRegistration = { ...draft.agentRegistration, tool: "None" };
-      const next: DealCopilotState = { stage: "collect_agent_system_prompt", draft };
+    const mode = text.trim().toLowerCase();
+    if (mode === "inbox") {
+      draft.agentRegistration = { ...draft.agentRegistration, tool: "Inbox", executionMode: "inbox" };
+      const next: DealCopilotState = { stage: "collect_agent_fee", draft };
       return {
         nextState: next,
         reply: {
-          text: `Got it, no extra tools.\n\nNext, please provide the **Instructions / Knowledge Base** for this agent. Tell it exactly how it should behave, or simply send a **URL link** to a file (like a GitHub Gist, raw GitHub repo file, Pastebin, etc.) containing its skill code/prompts.`,
+          text: `Tasks will be delivered to the creator inbox.\n\nWhat is the minimum fee (in USDC) per task?`,
           parseMode: "Markdown",
         },
       };
-    } else {
-      const toolName = text.trim();
-      draft.agentRegistration = { ...draft.agentRegistration, tool: toolName };
+    } else if (mode === "creator_mcp") {
+      draft.agentRegistration = { ...draft.agentRegistration, tool: "MCP", executionMode: "creator_mcp" };
       const next: DealCopilotState = { stage: "collect_agent_tool_key", draft };
       return {
         nextState: next,
         reply: {
-          text: `Great, you are adding **${toolName}** to this agent.\n\nPlease reply with your ${toolName} API Key. *(This will be securely encrypted and never shown again.)*`,
+          text: `Provide the public HTTPS endpoint for the creator-hosted MCP service. Do not send an API key or secret.`,
           parseMode: "Markdown",
         },
       };
     }
+    return { nextState: state, reply: { text: "Reply with `inbox` or `creator_mcp`.", parseMode: "Markdown" } };
   }
 
   if (state.stage === "collect_agent_tool_key") {
-     // User is providing a tool API key. We hide it from state visually, but store it.
-     draft.agentRegistration = { ...draft.agentRegistration, toolApiKey: text.trim() }; 
-     const next: DealCopilotState = { stage: "collect_agent_system_prompt", draft };
+     draft.agentRegistration = { ...draft.agentRegistration, mcpEndpoint: text.trim() };
+     const next: DealCopilotState = { stage: "collect_agent_fee", draft };
      return {
       nextState: next,
       reply: {
-        text: `🔐 API Key saved securely.\n\nNext, please provide the **Instructions / Knowledge Base** for this agent. Detail what its job is, or simply send a **URL link** to a file (like a GitHub Gist or raw code file) containing its logic.`,
+        text: `MCP endpoint saved.\n\nWhat is the minimum fee (in USDC) per task?`,
         parseMode: "Markdown",
       },
     };
   }
 
   if (state.stage === "collect_agent_system_prompt") {
-     draft.agentRegistration = { ...draft.agentRegistration, systemPrompt: text.trim() };
-     const isUrl = text.trim().startsWith("http");
-     const next: DealCopilotState = { stage: "collect_agent_fee", draft };
+     draft.agentRegistration = { ...draft.agentRegistration, skillUri: text.trim() };
+     const next: DealCopilotState = { stage: "collect_agent_tool", draft };
      return {
       nextState: next,
       reply: {
-        text: `${isUrl ? "🔗 Remote skill loaded!" : "🧠 Agent intelligence saved!"}\n\nFinally, what is the minimum fee (in USDC) a client must pay per task to hire this agent? (e.g. \`10\`)`,
+        text: `Skill pointer saved. Choose an execution mode: \`inbox\` or \`creator_mcp\`.`,
         parseMode: "Markdown",
       },
      };
@@ -738,7 +737,7 @@ export function handleMessage(
      return {
       nextState: next,
       reply: {
-        text: `🤖 **Agent Summary:**\n\n**Name:** ${draft.agentRegistration.name}\n**Skill:** ${draft.agentRegistration.skill}\n**Tool:** ${draft.agentRegistration.tool || "None"}\n**Task Fee:** $${fee} USDC\n\nEverything look correct?`,
+        text: `🤖 **Agent Summary:**\n\n**Name:** ${draft.agentRegistration.name}\n**Skill:** ${draft.agentRegistration.skill}\n**Skill URI:** ${draft.agentRegistration.skillUri}\n**Execution:** ${draft.agentRegistration.executionMode || "inbox"}\n**Task Fee:** $${fee} USDC\n\nEverything look correct?`,
         buttons: [[{ text: "✅ Deploy Agent", callback_data: "deploy_agent" }, { text: "🔄 Restart", callback_data: "reset_deal" }]],
         parseMode: "Markdown",
       },

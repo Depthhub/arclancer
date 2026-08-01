@@ -302,7 +302,7 @@ export async function lookupAgentIdentity(agentIdOrAddress: string): Promise<{
       console.log(`[lookupAgent] Not found in ERC-8004 Identity Registry, trying AgentRegistry marketplace...`, identityErr instanceof Error ? identityErr.message.slice(0, 100) : "");
       // ERC-8004 Identity Registry didn't have it — fallback to AgentRegistry marketplace
       try {
-        const { CONTRACTS, REGISTRY_ABI } = await import("@/lib/contracts");
+        const { CONTRACTS, REGISTRY_ABI } = await import("../contracts.js");
         console.log(`[lookupAgent] Querying AgentRegistry at ${CONTRACTS.REGISTRY} for tokenId ${tokenId}`);
         const data = await pub.readContract({
           address: CONTRACTS.REGISTRY as Address,

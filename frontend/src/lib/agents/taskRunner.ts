@@ -1,6 +1,5 @@
 import { getJsonStore } from '@/lib/dealCopilot/storage';
 import { executeAgentTask } from '@/lib/dealCopilot/agentTools';
-import { dispatchToWorker, isWorkerEnabled, isHeavyTask } from '@/lib/dealCopilot/openclawDispatch';
 import { getAgentMeta } from './metadataStore';
 import { fetchAgentById } from './registry';
 import type { AgentRunResponse } from './types';
@@ -102,36 +101,14 @@ export async function runAgentTask(params: {
         payerAddress.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
     );
 
-    if (isWorkerEnabled() && isHeavyTask(taskText)) {
-        const taskId = `web-${Date.now()}`;
-        await store.setJSON(
-            `agent_web_task:${taskId}`,
-            { agentId, taskText, payerAddress, status: 'queued', createdAt: Date.now() },
-            PAYMENT_TTL
-        );
-        const message = await dispatchToWorker(
-            taskText,
-            `web:${payerAddress}`,
-            webFromId,
-            store,
-            agentId
-        );
-        await store.setJSON(
-            `agent_web_task:${taskId}`,
-            { agentId, taskText, payerAddress, status: 'queued', response: message, createdAt: Date.now() },
-            PAYMENT_TTL
-        );
-        return { ok: true, taskId, response: message };
-    }
-
-    const response = await executeAgentTask(store, webFromId, agentId, taskText);
+    const routing = await executeAgentTask(store, webFromId, agentId, taskText);
     const taskId = `web-${Date.now()}`;
     await store.setJSON(
         `agent_web_task:${taskId}`,
-        { agentId, taskText, payerAddress, status: 'complete', response, createdAt: Date.now() },
+        { agentId, taskText, payerAddress, status: 'routed', routing, createdAt: Date.now() },
         PAYMENT_TTL
     );
-    return { ok: true, taskId, response };
+    return { ok: true, taskId, response: routing.message, routing };
 }
 
 export async function getWebTask(taskId: string) {
@@ -142,6 +119,7 @@ export async function getWebTask(taskId: string) {
         payerAddress: string;
         status: string;
         response?: string;
+        routing?: AgentRunResponse['routing'];
         createdAt: number;
     }>(`agent_web_task:${taskId}`);
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MyAgentsTable } from '@/components/agents/MyAgentsTable';
@@ -11,7 +11,7 @@ import { isAgentsUiEnabled } from '@/lib/agents/featureFlag';
 import { ArrowLeft, Bot, Plus, RefreshCw } from 'lucide-react';
 
 export default function DashboardAgentsPage() {
-    const { isConnected } = useAccount();
+    const { isConnected } = useWallet();
     const { data: agents, isLoading, refetch } = useMyAgents();
 
     if (!isAgentsUiEnabled()) {
@@ -25,7 +25,7 @@ export default function DashboardAgentsPage() {
                     <Bot className="w-12 h-12 text-violet-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold mb-2">Connect Your Wallet</h2>
                     <p className="text-neutral-500 mb-6">View agents you created on Arc.</p>
-                    <ConnectButton />
+                    <ConnectWalletButton />
                 </Card>
             </div>
         );

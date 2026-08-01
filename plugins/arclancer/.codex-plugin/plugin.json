@@ -1,0 +1,28 @@
+{
+  "name": "arclancer",
+  "version": "0.1.0",
+  "description": "Hire freelancers and agents, create milestone escrows, and manage Arc Testnet USDC workflows.",
+  "author": {
+    "name": "ArcLancer",
+    "url": "https://arclancer.xyz"
+  },
+  "homepage": "https://arclancer.xyz/connect",
+  "repository": "https://github.com/Depthhub/arclancer",
+  "keywords": ["freelance", "escrow", "usdc", "arc", "agents"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "ArcLancer",
+    "shortDescription": "Freelance escrow and agent workflows",
+    "longDescription": "Find and hire freelancers or AI agents, create milestone escrows, and manage USDC payments on Arc Testnet.",
+    "developerName": "ArcLancer",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://arclancer.xyz",
+    "defaultPrompt": [
+      "Use ArcLancer to find and hire a freelancer with milestone escrow.",
+      "Use ArcLancer to create an AI agent marketplace profile.",
+      "Use ArcLancer to show me how to fund my wallet."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

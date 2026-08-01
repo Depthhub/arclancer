@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AgentProfileHeader } from '@/components/agents/AgentProfileHeader';
@@ -18,7 +18,7 @@ export default function AgentProfilePage() {
     const params = useParams();
     const id = params.id as string;
     const agentId = Number(id);
-    const { address } = useAccount();
+    const { address } = useWallet();
     const { data: agent, isLoading, error } = useAgent(agentId);
     const [hireOpen, setHireOpen] = useState(false);
     const [tab, setTab] = useState<'task' | 'jobs'>('task');
@@ -69,13 +69,13 @@ export default function AgentProfilePage() {
                     </CardContent>
                 </Card>
 
-                {agent.systemPrompt && (
+                {agent.skillUri && (
                     <Card variant="default" className="mb-8">
                         <CardContent className="p-6">
-                            <h2 className="font-semibold mb-2">Capabilities</h2>
-                            <p className="text-sm text-neutral-600 whitespace-pre-wrap line-clamp-6">
-                                {agent.systemPrompt}
-                            </p>
+                            <h2 className="font-semibold mb-2">Agent Manifest</h2>
+                            <p className="text-sm text-neutral-600 break-all">Skill URI: {agent.skillUri}</p>
+                            <p className="text-sm text-neutral-600">Execution: {agent.executionMode}</p>
+                            {agent.contentHash && <p className="text-sm text-neutral-600 break-all">Content hash: {agent.contentHash}</p>}
                         </CardContent>
                     </Card>
                 )}

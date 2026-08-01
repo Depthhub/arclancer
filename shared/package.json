@@ -1,0 +1,12 @@
+{
+  "name": "@arclancer/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./context/*": "./src/context/*.ts",
+    "./store/*": "./src/store/*.ts",
+    "./services/*": "./src/services/*.ts",
+    "./tools/*": "./src/tools/*.ts"
+  }
+}

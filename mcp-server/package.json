@@ -1,0 +1,31 @@
+{
+  "name": "@arclancer/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ArcLancer MCP server — escrow, agents, and USDC payments on Arc",
+  "bin": {
+    "arclancer-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "echo Build via tsx runtime (npm run dev). Cross-package imports use tsconfig-paths at runtime.",
+    "start": "node dist/index.js",
+    "dev": "tsx src/bootstrap.ts",
+    "dev:http": "tsx src/http-bootstrap.ts",
+    "start:http": "tsx src/http-bootstrap.ts",
+    "test:tickets": "tsx --test src/creatorTickets.test.ts",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^17.3.1",
+    "tsconfig-paths": "^4.2.0",
+    "viem": "^2.54.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.0"
+  }
+}

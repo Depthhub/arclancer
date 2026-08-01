@@ -1,22 +1,35 @@
 'use client';
 
 import { Input } from '@/components/ui/Input';
+import type { AgentExecutionMode } from '@/lib/agents/types';
 
 interface AgentMetaFormProps {
-    systemPrompt: string;
+    skillUri: string;
+    contentHash: string;
+    executionMode: AgentExecutionMode;
+    mcpEndpoint: string;
     description: string;
     skills: string;
-    onSystemPromptChange: (v: string) => void;
+    onSkillUriChange: (v: string) => void;
+    onContentHashChange: (v: string) => void;
+    onExecutionModeChange: (v: AgentExecutionMode) => void;
+    onMcpEndpointChange: (v: string) => void;
     onDescriptionChange: (v: string) => void;
     onSkillsChange: (v: string) => void;
     disabled?: boolean;
 }
 
 export function AgentMetaForm({
-    systemPrompt,
+    skillUri,
+    contentHash,
+    executionMode,
+    mcpEndpoint,
     description,
     skills,
-    onSystemPromptChange,
+    onSkillUriChange,
+    onContentHashChange,
+    onExecutionModeChange,
+    onMcpEndpointChange,
     onDescriptionChange,
     onSkillsChange,
     disabled,
@@ -47,17 +60,43 @@ export function AgentMetaForm({
             </div>
             <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    System prompt (agent brain)
+                    Skill URI
                 </label>
-                <textarea
-                    value={systemPrompt}
-                    onChange={(e) => onSystemPromptChange(e.target.value)}
-                    placeholder="You are an expert..."
+                <Input
+                    value={skillUri}
+                    onChange={(e) => onSkillUriChange(e.target.value)}
+                    placeholder="ipfs://… or https://creator.example/agent.json"
                     disabled={disabled}
-                    rows={6}
-                    className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 />
             </div>
+            <Input
+                label="Content hash (optional)"
+                value={contentHash}
+                onChange={(e) => onContentHashChange(e.target.value)}
+                placeholder="sha256:…"
+                disabled={disabled}
+            />
+            <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Execution mode</label>
+                <select
+                    value={executionMode}
+                    onChange={(e) => onExecutionModeChange(e.target.value as AgentExecutionMode)}
+                    disabled={disabled}
+                    className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm"
+                >
+                    <option value="inbox">Creator inbox</option>
+                    <option value="creator_mcp">Creator-hosted MCP</option>
+                </select>
+            </div>
+            {executionMode === 'creator_mcp' && (
+                <Input
+                    label="Creator MCP endpoint"
+                    value={mcpEndpoint}
+                    onChange={(e) => onMcpEndpointChange(e.target.value)}
+                    placeholder="https://agents.example.com/mcp"
+                    disabled={disabled}
+                />
+            )}
         </div>
     );
 }

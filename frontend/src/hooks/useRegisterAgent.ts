@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { CONTRACTS, REGISTRY_ABI } from '@/lib/contracts';
 import { parseUSDC } from '@/lib/utils';
+import type { AgentExecutionMode } from '@/lib/agents/types';
 
 export type RegisterAgentStep = 'idle' | 'registering' | 'saving_meta' | 'success' | 'error';
 
@@ -12,13 +14,16 @@ export interface RegisterAgentInput {
     skill: string;
     toolName: string;
     taskFeeUsdc: number;
-    systemPrompt: string;
+    skillUri: string;
+    contentHash?: string;
+    executionMode: AgentExecutionMode;
+    mcpEndpoint?: string;
     description?: string;
     skills?: string[];
 }
 
 export function useRegisterAgent() {
-    const { address } = useAccount();
+    const { address, mode, executeContract } = useWallet();
     const [step, setStep] = useState<RegisterAgentStep>('idle');
     const [error, setError] = useState<string | null>(null);
     const [agentId, setAgentId] = useState<number | null>(null);
@@ -39,30 +44,61 @@ export function useRegisterAgent() {
 
             try {
                 const taskFee = parseUSDC(String(input.taskFeeUsdc));
-                const hash = await writeContractAsync({
-                    address: CONTRACTS.REGISTRY,
-                    abi: REGISTRY_ABI,
-                    functionName: 'registerAgent',
-                    args: [input.name, input.skill, input.toolName || 'None', taskFee],
-                });
-
-                setStep('saving_meta');
-
-                // Wait for receipt via polling (wagmi hook updates async)
-                const { waitForTransactionReceipt } = await import('wagmi/actions');
-                const { wagmiConfig } = await import('@/lib/wagmi');
-                const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, timeout: 60_000 });
-
-                // Parse AgentRegistered event for token id
                 let mintedId: number | null = null;
-                for (const log of receipt.logs) {
-                    if (log.topics[1]) {
-                        mintedId = Number(BigInt(log.topics[1] as string));
-                        break;
+                if (mode === 'circle' && executeContract) {
+                    const beforeResponse = await fetch(`/api/agents?owner=${address}`);
+                    const beforeJson = await beforeResponse.json();
+                    const existingIds = new Set<number>(
+                        ((beforeJson.agents ?? []) as { id: number }[]).map((agent) => agent.id)
+                    );
+
+                    await executeContract({
+                        contractAddress: CONTRACTS.REGISTRY,
+                        abiFunctionSignature: 'registerAgent(string,string,string,uint256)',
+                        abiParameters: [
+                            input.name,
+                            input.skill,
+                            input.toolName || 'None',
+                            taskFee.toString(),
+                        ],
+                    });
+                    setStep('saving_meta');
+
+                    for (let attempt = 0; attempt < 10 && !mintedId; attempt += 1) {
+                        if (attempt > 0) {
+                            await new Promise((resolve) => window.setTimeout(resolve, 2000));
+                        }
+                        const response = await fetch(`/api/agents?owner=${address}`, {
+                            cache: 'no-store',
+                        });
+                        const json = await response.json();
+                        const created = ((json.agents ?? []) as { id: number; name?: string }[])
+                            .filter((agent) => !existingIds.has(agent.id))
+                            .sort((a, b) => b.id - a.id)[0];
+                        mintedId = created?.id ?? null;
+                    }
+                } else {
+                    const hash = await writeContractAsync({
+                        address: CONTRACTS.REGISTRY,
+                        abi: REGISTRY_ABI,
+                        functionName: 'registerAgent',
+                        args: [input.name, input.skill, input.toolName || 'None', taskFee],
+                    });
+
+                    setStep('saving_meta');
+                    const { waitForTransactionReceipt } = await import('wagmi/actions');
+                    const { wagmiConfig } = await import('@/lib/wagmi');
+                    const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, timeout: 60_000 });
+
+                    for (const log of receipt.logs) {
+                        if (log.topics[1]) {
+                            mintedId = Number(BigInt(log.topics[1] as string));
+                            break;
+                        }
                     }
                 }
 
-                if (!mintedId) {
+                if (!mintedId && mode !== 'circle') {
                     // Fallback: scan recent ids
                     const listRes = await fetch(`/api/agents?owner=${address}`);
                     const listJson = await listRes.json();
@@ -80,7 +116,10 @@ export function useRegisterAgent() {
                     body: JSON.stringify({
                         ownerAddress: address,
                         name: input.name,
-                        systemPrompt: input.systemPrompt,
+                        skill_uri: input.skillUri,
+                        content_hash: input.contentHash,
+                        execution_mode: input.executionMode,
+                        mcp_endpoint: input.executionMode === 'creator_mcp' ? input.mcpEndpoint : undefined,
                         description: input.description,
                         skills: input.skills,
                         price: input.taskFeeUsdc,
@@ -103,7 +142,7 @@ export function useRegisterAgent() {
                 return null;
             }
         },
-        [address, writeContractAsync]
+        [address, mode, executeContract, writeContractAsync]
     );
 
     return {

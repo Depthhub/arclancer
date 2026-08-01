@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useUserContracts } from '@/hooks/useContracts';
@@ -29,7 +29,7 @@ import { Plus, Wallet } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
 export default function DashboardPage() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected } = useWallet();
 
     // Fetch contracts first (single source of truth)
     const { contracts, isLoading: contractsLoading, refetch } = useUserContracts();
@@ -61,9 +61,9 @@ export default function DashboardPage() {
                         </div>
                         <h2 className="text-2xl font-bold text-neutral-900 mb-3">Connect Your Wallet</h2>
                         <p className="text-neutral-500 mb-6">
-                            Connect your wallet to view your contracts and start freelancing on Arc.
+                            Sign in with email to get a Circle wallet on Arc Testnet — no MetaMask required.
                         </p>
-                        <ConnectButton />
+                        <ConnectWalletButton />
                     </div>
                 </Card>
             </div>

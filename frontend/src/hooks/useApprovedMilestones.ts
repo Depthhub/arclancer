@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useReadContract } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { useUserContracts } from './useContracts';
 import { ESCROW_ABI } from '@/lib/contracts';
 
@@ -17,7 +18,7 @@ export interface ApprovedMilestone {
  * Hook to fetch all approved but unpaid milestones for the current user
  */
 export function useApprovedMilestones() {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const { contracts } = useUserContracts();
     const [approvedMilestones, setApprovedMilestones] = useState<ApprovedMilestone[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +125,7 @@ export function useApprovedMilestones() {
  * Hook to fetch approved milestones for a specific contract
  */
 export function useContractApprovedMilestones(contractAddress: `0x${string}` | undefined) {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [milestones, setMilestones] = useState<ApprovedMilestone[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 

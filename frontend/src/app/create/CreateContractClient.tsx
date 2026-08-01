@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useBalance } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useBalance } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -38,7 +39,7 @@ type TransactionStep = 'idle' | 'approving' | 'approved' | 'creating' | 'success
 export default function CreateContractClient() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, mode, executeContract, usdcBalance: circleUsdcBalance } = useWallet();
     const [step, setStep] = useState(1);
     const [txStep, setTxStep] = useState<TransactionStep>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
@@ -162,7 +163,10 @@ export default function CreateContractClient() {
     // Why: on Arc, USDC is native, so certain balance read paths can return 0 even when the wallet is funded.
     const erc20Bal = usdcBalance ? Number(usdcBalance) / 1e6 : 0;
     const nativeBal = nativeBalance ? Number(nativeBalance.value) / 10 ** (nativeBalance.decimals) : 0;
-    const effectiveBalance = Math.max(erc20Bal, nativeBal);
+    const effectiveBalance =
+        mode === 'circle'
+            ? (circleUsdcBalance ? Number(circleUsdcBalance) : 0)
+            : Math.max(erc20Bal, nativeBal);
 
     const hasEnoughBalance = effectiveBalance >= fee;
     const hasEnoughAllowance = currentAllowance ? Number(currentAllowance) / 1e6 >= fee : false;
@@ -254,6 +258,37 @@ export default function CreateContractClient() {
             description: m.description,
         }));
 
+        if (mode === 'circle' && executeContract) {
+            try {
+                if (!hasEnoughAllowance) {
+                    setTxStep('approving');
+                    await executeContract({
+                        contractAddress: CONTRACTS.USDC,
+                        abiFunctionSignature: 'approve(address,uint256)',
+                        abiParameters: [CONTRACTS.FACTORY, feeAmount.toString()],
+                    });
+                    await refetchAllowance();
+                }
+                setTxStep('creating');
+                await executeContract({
+                    contractAddress: CONTRACTS.FACTORY,
+                    abiFunctionSignature:
+                        'createEscrowContract(address,uint256,address,(uint256,string)[])',
+                    abiParameters: [
+                        data.freelancerAddress,
+                        parseUSDC(data.totalAmount).toString(),
+                        payoutCurrencyAddress,
+                        milestones.map((m) => [m.amount.toString(), m.description]),
+                    ],
+                });
+                setTxStep('success');
+            } catch (err) {
+                setTxStep('error');
+                setErrorMessage(err instanceof Error ? err.message : 'Transaction failed');
+            }
+            return;
+        }
+
         // ArcLancer fee collection uses an allowance flow (approve → create).
         // On Arc, fees are stablecoin-denominated which keeps UX predictable for users.
         if (!hasEnoughAllowance) {
@@ -322,7 +357,7 @@ export default function CreateContractClient() {
                         <p className="text-neutral-500 mb-6">
                             Connect your wallet to create a new escrow contract.
                         </p>
-                        <ConnectButton />
+                        <ConnectWalletButton />
                     </div>
                 </Card>
             </div>

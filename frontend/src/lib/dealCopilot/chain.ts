@@ -168,7 +168,7 @@ export async function fetchUserContracts(walletAddress: string): Promise<string[
  * Fetch all registered AI agents from the AgentRegistry contract.
  */
 export async function fetchRegisteredAgents(): Promise<OnchainAgent[]> {
-    const { fetchRegisteredAgents: fetchAgents } = await import("@/lib/agents/registry");
+    const { fetchRegisteredAgents: fetchAgents } = await import("../agents/registry.js");
     return fetchAgents();
 }
 

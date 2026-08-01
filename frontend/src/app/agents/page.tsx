@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Button } from '@/components/ui/Button';
 import { AgentList } from '@/components/agents/AgentList';
 import { useAgents } from '@/hooks/useAgents';
@@ -35,7 +35,7 @@ export default function AgentsMarketplacePage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <ConnectButton />
+                        <ConnectWalletButton />
                         <Button variant="outline" size="sm" onClick={() => refetch()} leftIcon={<RefreshCw className="w-4 h-4" />}>
                             Refresh
                         </Button>

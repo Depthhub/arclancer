@@ -1,4 +1,11 @@
 name: arclancer
+domains:
+  - domain: arclancer.xyz
+    type: PRIMARY
+  - domain: www.arclancer.xyz
+    type: ALIAS
+  - domain: mcp.arclancer.xyz
+    type: ALIAS
 services:
   - name: frontend
     github:
@@ -11,7 +18,7 @@ services:
     http_port: 3000
     envs:
       - key: NEXT_PUBLIC_APP_URL
-        value: "https://arclancer-58ipp.ondigitalocean.app"
+        value: "https://arclancer.xyz"
         scope: RUN_AND_BUILD_TIME
       - key: NEXT_PUBLIC_CCTP_UI_ENABLED
         value: "true"
@@ -55,8 +62,75 @@ services:
       - key: WALLET_ENCRYPTION_SECRET
         scope: RUN_TIME
         type: SECRET
+      - key: CIRCLE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: NEXT_PUBLIC_CIRCLE_APP_ID
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: NEXT_PUBLIC_CIRCLE_WALLETS_ENABLED
+        value: "true"
+        scope: RUN_AND_BUILD_TIME
+      - key: ARC_NETWORK
+        value: "testnet"
+        scope: RUN_TIME
+      - key: CIRCLE_PAYMENT_GATEWAY_URL
+        scope: RUN_TIME
+        type: SECRET
       - key: OPENCLAW_WORKER_URL
         value: "redis"
+        scope: RUN_TIME
+  - name: mcp-server
+    github:
+      repo: Depthhub/arclancer
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm --prefix frontend install && npm --prefix mcp-server install
+    run_command: npm --prefix mcp-server run start:http
+    http_port: 3100
+    health_check:
+      http_path: /health
+    routes:
+      - path: /mcp
+      - path: /health
+      - path: /creator-tickets
+    envs:
+      - key: MCP_HTTP_PORT
+        value: "3100"
+        scope: RUN_TIME
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://arclancer.xyz"
+        scope: RUN_TIME
+      - key: NEXT_PUBLIC_ARC_TESTNET_RPC_URL
+        value: "https://rpc.testnet.arc.network"
+        scope: RUN_TIME
+      - key: MCP_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: WALLET_ENCRYPTION_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: CIRCLE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: ARC_NETWORK
+        value: "testnet"
+        scope: RUN_TIME
+      - key: CIRCLE_PAYMENT_GATEWAY_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: UPSTASH_REDIS_REST_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: CREATOR_MCP_TICKET_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: CREATOR_MCP_TICKET_TTL_SECONDS
+        value: "300"
         scope: RUN_TIME
 
 workers:

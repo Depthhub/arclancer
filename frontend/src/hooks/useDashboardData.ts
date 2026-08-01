@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { useUserContracts, useContractDetails } from './useContracts';
 import { ContractStatus } from '@/types';
 
@@ -25,7 +25,7 @@ export interface DashboardStats {
  * Uses individual contract hooks for each contract
  */
 export function useDashboardData() {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const { contracts, isLoading: contractsLoading } = useUserContracts();
     const [stats, setStats] = useState<DashboardStats>({
         totalContracts: 0,
@@ -171,7 +171,7 @@ export function useDashboardData() {
  * Hook to fetch and aggregate stats from multiple contract details
  */
 export function useAggregatedStats(contractAddresses: `0x${string}`[] | undefined) {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [aggregatedStats, setAggregatedStats] = useState({
         inEscrow: 0,
         available: 0,

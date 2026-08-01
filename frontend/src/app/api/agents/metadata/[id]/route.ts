@@ -15,7 +15,7 @@ export async function GET(
 
         const baseUrl =
             process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-            'https://arclancer-58ipp.ondigitalocean.app';
+            'https://arclancer.xyz';
 
         return NextResponse.json({
             name: agent.name,

@@ -242,16 +242,19 @@ export const AGENT_TOOL_DEFINITIONS = [
     type: "function" as const,
     function: {
       name: "register_agent_identity",
-      description: "Register a new AI agent on the ArcLancer Marketplace so it can be discovered and hired by other users. Requires confirmation. Collects the agent's name, skill description, task fee in USDC, and optionally a URL to a skill/instructions file (GitHub Gist, raw file, etc.).",
+      description: "Register a new AI agent using public skill pointers and creator-controlled execution. Never collect prompts or API keys.",
       parameters: {
         type: "object",
         properties: {
           name: { type: "string", description: "Agent name (e.g. 'TermSheet', 'DeFi Auditor')" },
           skill: { type: "string", description: "What the agent does — its primary skill profile (e.g. 'Startup Fundraising & VC Readiness agent')" },
           fee: { type: "number", description: "Task fee in USDC that clients must pay per execution (e.g. 2)" },
-          skill_url: { type: "string", description: "Optional URL to a skill file / system prompt (GitHub Gist raw URL, Pastebin, etc.)" },
+          skill_uri: { type: "string", description: "Public URI identifying the creator-hosted skill or manifest. ArcLancer will not fetch it." },
+          content_hash: { type: "string", description: "Optional integrity hash for the referenced content." },
+          execution_mode: { type: "string", enum: ["inbox", "creator_mcp"], description: "Where tasks are routed." },
+          mcp_endpoint: { type: "string", description: "Creator-hosted MCP endpoint; required for creator_mcp." },
         },
-        required: ["name", "skill"],
+        required: ["name", "skill", "skill_uri"],
       },
     },
   },

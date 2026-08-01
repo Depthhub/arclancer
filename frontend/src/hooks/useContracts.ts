@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { CONTRACTS, FACTORY_ABI, ESCROW_ABI } from '@/lib/contracts';
 import type { ContractDetails, Milestone, ContractStatus } from '@/types';
 import { useEffect, useState } from 'react';
@@ -10,7 +11,7 @@ import { useEffect, useState } from 'react';
  * Hook to fetch all contracts for the current user
  */
 export function useUserContracts() {
-    const { address } = useAccount();
+    const { address } = useWallet();
 
     const { data: contractAddresses, isLoading, error, refetch } = useReadContract({
         address: CONTRACTS.FACTORY as `0x${string}`,

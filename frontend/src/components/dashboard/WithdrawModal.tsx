@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -54,7 +55,7 @@ interface WithdrawModalProps {
 }
 
 export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsdcClick }: WithdrawModalProps) {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [selectedMilestones, setSelectedMilestones] = useState<Set<string>>(new Set());
     const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
     const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);

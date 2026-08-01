@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { useUserContracts } from './useContracts';
 import type { PendingAction } from '@/components/dashboard/PendingActionsCard';
 
@@ -15,7 +15,7 @@ import type { PendingAction } from '@/components/dashboard/PendingActionsCard';
  *  - Either party has withdrawable milestones → type "approve"
  */
 export function usePendingActions() {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const { contracts } = useUserContracts();
     const [actions, setActions] = useState<PendingAction[]>([]);
     const [isLoading, setIsLoading] = useState(true);

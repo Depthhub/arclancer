@@ -1,13 +1,18 @@
 'use client';
 
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
+import { useState } from 'react';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { ESCROW_ABI, ERC20_ABI, CONTRACTS } from '@/lib/contracts';
 
 /**
  * Hook for escrow contract write operations
  */
 export function useEscrow(contractAddress: `0x${string}` | undefined) {
-    const { address } = useAccount();
+    const { address, mode, executeContract } = useWallet();
+    const [circlePending, setCirclePending] = useState(false);
+    const [circleSuccess, setCircleSuccess] = useState(false);
+    const [circleError, setCircleError] = useState<Error | null>(null);
 
     const {
         writeContract,
@@ -20,6 +25,27 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
         hash,
     });
+
+    const executeCircle = async (abiFunctionSignature: string, abiParameters: unknown[] = []) => {
+        if (!contractAddress || !executeContract) return false;
+        setCirclePending(true);
+        setCircleSuccess(false);
+        setCircleError(null);
+        try {
+            await executeContract({
+                contractAddress,
+                abiFunctionSignature,
+                abiParameters,
+            });
+            setCircleSuccess(true);
+            return true;
+        } catch (err) {
+            setCircleError(err instanceof Error ? err : new Error('Circle transaction failed'));
+            throw err;
+        } finally {
+            setCirclePending(false);
+        }
+    };
 
     // Check if contract is funded
     const { data: isFunded, refetch: refetchFunded } = useReadContract({
@@ -43,6 +69,26 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const approveForFunding = async (amount: bigint) => {
         if (!contractAddress || !address) return;
 
+        if (mode === 'circle' && executeContract) {
+            setCirclePending(true);
+            setCircleSuccess(false);
+            setCircleError(null);
+            try {
+                await executeContract({
+                    contractAddress: CONTRACTS.USDC,
+                    abiFunctionSignature: 'approve(address,uint256)',
+                    abiParameters: [contractAddress, amount.toString()],
+                });
+                setCircleSuccess(true);
+            } catch (err) {
+                setCircleError(err instanceof Error ? err : new Error('Circle approval failed'));
+                throw err;
+            } finally {
+                setCirclePending(false);
+            }
+            return;
+        }
+
         writeContract({
             address: CONTRACTS.USDC as `0x${string}`,
             abi: ERC20_ABI,
@@ -57,13 +103,7 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const fundContract = async (amount: bigint) => {
         if (!contractAddress || !address) return;
 
-        // Note: This now calls approve. The UI should handle the two-step flow.
-        writeContract({
-            address: CONTRACTS.USDC as `0x${string}`,
-            abi: ERC20_ABI,
-            functionName: 'approve',
-            args: [contractAddress, amount],
-        });
+        await approveForFunding(amount);
     };
 
     /**
@@ -72,6 +112,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const executeFund = async () => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('fundContract()');
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -85,6 +129,13 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const submitMilestone = async (milestoneIndex: number, deliverableURI: string) => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('submitMilestone(uint256,string)', [
+                String(milestoneIndex),
+                deliverableURI,
+            ]);
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -99,6 +150,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const approveMilestone = async (milestoneIndex: number) => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('approveMilestone(uint256)', [String(milestoneIndex)]);
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -113,6 +168,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const autoApproveMilestone = async (milestoneIndex: number) => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('autoApproveMilestone(uint256)', [String(milestoneIndex)]);
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -127,6 +186,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const releaseMilestonePayment = async (milestoneIndex: number) => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('releaseMilestonePayment(uint256)', [String(milestoneIndex)]);
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -141,6 +204,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const initiateDispute = async () => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('initiateDispute()');
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -154,6 +221,10 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
     const cancelContract = async () => {
         if (!contractAddress) return;
 
+        if (mode === 'circle') {
+            await executeCircle('cancelContract()');
+            return;
+        }
         writeContract({
             address: contractAddress,
             abi: ESCROW_ABI,
@@ -180,11 +251,16 @@ export function useEscrow(contractAddress: `0x${string}` | undefined) {
 
         // Transaction State
         hash,
-        isPending,
-        isConfirming,
-        isSuccess,
-        error,
-        reset,
+        isPending: mode === 'circle' ? circlePending : isPending,
+        isConfirming: mode === 'circle' ? circlePending : isConfirming,
+        isSuccess: mode === 'circle' ? circleSuccess : isSuccess,
+        error: mode === 'circle' ? circleError : error,
+        reset: mode === 'circle'
+            ? () => {
+                setCircleSuccess(false);
+                setCircleError(null);
+            }
+            : reset,
     };
 }
 

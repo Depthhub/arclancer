@@ -1,13 +1,17 @@
+export type AgentExecutionMode = 'inbox' | 'creator_mcp';
+
 export interface AgentMeta {
     name?: string;
-    systemPrompt?: string;
+    skill_uri?: string;
+    content_hash?: string;
+    execution_mode?: AgentExecutionMode;
+    mcp_endpoint?: string;
     skills?: string[];
     price?: number;
     description?: string;
     creatorId?: number;
     ownerWallet?: string;
     createdAt?: string;
-    toolApiKey?: string;
 }
 
 export interface OnchainAgent {
@@ -22,7 +26,10 @@ export interface OnchainAgent {
 
 export interface AgentListing extends OnchainAgent {
     taskFeeUsdc: number;
-    systemPrompt?: string;
+    skillUri?: string;
+    contentHash?: string;
+    executionMode: AgentExecutionMode;
+    mcpEndpoint?: string;
     skills?: string[];
     price?: number;
     description?: string;
@@ -43,7 +50,16 @@ export interface AgentRunResponse {
     ownerWallet?: string;
     response?: string;
     taskId?: string;
+    routing?: AgentTaskRouting;
     error?: string;
+}
+
+export interface AgentTaskRouting {
+    executionMode: AgentExecutionMode;
+    skillUri?: string;
+    contentHash?: string;
+    mcpEndpoint?: string;
+    message: string;
 }
 
 export interface Agent8183JobRequest {

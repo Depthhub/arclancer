@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -41,7 +42,7 @@ import toast from 'react-hot-toast';
 export default function ContractDetailPage() {
     const params = useParams();
     const contractAddress = params.id as `0x${string}`;
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, mode } = useWallet();
     const [activeTab, setActiveTab] = useState<'milestones' | 'timeline'>('milestones');
     const [fundingStep, setFundingStep] = useState<'idle' | 'approving' | 'funding'>('idle');
     const [showDisputeModal, setShowDisputeModal] = useState(false);
@@ -208,6 +209,17 @@ export default function ContractDetailPage() {
 
         if (needsApproval) {
             setFundingStep('approving');
+            if (mode === 'circle') {
+                try {
+                    await escrow.approveForFunding(details.totalAmount);
+                    await refetchAllowance();
+                    setFundingStep('funding');
+                } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Approval failed');
+                    setFundingStep('idle');
+                }
+                return;
+            }
             writeApprove({
                 address: CONTRACTS.USDC as `0x${string}`,
                 abi: ERC20_ABI,
@@ -248,7 +260,7 @@ export default function ContractDetailPage() {
                         <p className="text-neutral-500 mb-6">
                             Connect your wallet to view contract details.
                         </p>
-                        <ConnectButton />
+                        <ConnectWalletButton />
                     </div>
                 </Card>
             </div>

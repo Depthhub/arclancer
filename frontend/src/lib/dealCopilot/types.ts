@@ -67,8 +67,10 @@ export interface AgentRegistrationDraft {
   name?: string;
   skill?: string;
   tool?: string;
-  toolApiKey?: string;
-  systemPrompt?: string;
+  skillUri?: string;
+  contentHash?: string;
+  executionMode?: "inbox" | "creator_mcp";
+  mcpEndpoint?: string;
   fee?: number;
 }
 

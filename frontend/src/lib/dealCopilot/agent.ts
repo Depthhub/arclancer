@@ -536,22 +536,25 @@ async function executeConfirmedAction(
       const agentName = (p.name as string) || "Unnamed Agent";
       const agentSkill = (p.skill as string) || "General AI";
       const agentFee = (p.fee as number) || 0;
-      const skillUrl = (p.skill_url as string) || "";
+      const skillUri = (p.skill_uri as string) || (p.skill_url as string) || "";
+      const contentHash = (p.content_hash as string) || "";
+      const executionMode = p.execution_mode === "creator_mcp" ? "creator_mcp" : "inbox";
+      const mcpEndpoint = (p.mcp_endpoint as string) || "";
 
       const result = await deployAgent(pk, agentName, agentSkill, "None", agentFee);
       if (result.success) {
         const agentId = result.contractAddress; // This is the token ID from the AgentRegistered event
 
-        // Save off-chain metadata to Redis so the agent is fully functional
+        // Store public pointers and routing only; execution remains creator-controlled.
         if (agentId) {
           const skills: string[] = [];
-          if (skillUrl) skills.push(skillUrl);
 
           await store.setJSON(`agent_meta:${agentId}`, {
             name: agentName,
-            systemPrompt: skillUrl
-              ? `You are ${agentName}, a ${agentSkill} agent. Follow the instructions at your skill URL precisely.`
-              : `You are ${agentName}, a ${agentSkill} agent.`,
+            skill_uri: skillUri,
+            content_hash: contentHash || undefined,
+            execution_mode: executionMode,
+            mcp_endpoint: executionMode === "creator_mcp" ? mcpEndpoint : undefined,
             skills,
             price: agentFee,
             creatorId: fromId,
@@ -569,7 +572,7 @@ async function executeConfirmedAction(
           `💰 Fee: $${agentFee} USDC`,
           `🔗 Tx: \`${(result.hash?.slice(0, 14) || "")}…\``,
         ];
-        if (skillUrl) lines.push(`📄 Skill URL: ${skillUrl}`);
+        if (skillUri) lines.push(`📄 Skill URI: ${skillUri}`);
         if (result.explorerUrl) lines.push(`🔗 ${result.explorerUrl}`);
         lines.push("", "_Your agent is now live and hireable on the ArcLancer Marketplace!_");
         return lines.join("\n");

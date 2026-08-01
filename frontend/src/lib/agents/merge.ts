@@ -5,7 +5,10 @@ export function mergeAgent(onchain: OnchainAgent, meta: AgentMeta | null): Agent
     return {
         ...onchain,
         taskFeeUsdc: onchain.taskFee,
-        systemPrompt: meta?.systemPrompt,
+        skillUri: meta?.skill_uri,
+        contentHash: meta?.content_hash,
+        executionMode: meta?.execution_mode ?? 'inbox',
+        mcpEndpoint: meta?.execution_mode === 'creator_mcp' ? meta.mcp_endpoint : undefined,
         skills: meta?.skills,
         price: meta?.price ?? onchain.taskFee,
         description: meta?.description,

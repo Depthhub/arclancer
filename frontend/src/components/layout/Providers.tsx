@@ -6,6 +6,8 @@ import { RainbowKitProvider, lightTheme } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { wagmiConfig } from '@/lib/wagmi';
+import { CircleWalletProvider } from '@/context/CircleWalletProvider';
+import { CircleConnectModal } from '@/components/wallet/CircleConnectModal';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Create QueryClient outside component to avoid recreation on every render
@@ -44,17 +46,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <WagmiProvider config={wagmiConfig}>
             <QueryClientProvider client={queryClient}>
-                <RainbowKitProvider
-                    theme={lightTheme({
-                        accentColor: '#2563eb',
-                        accentColorForeground: 'white',
-                        borderRadius: 'large',
-                        fontStack: 'system',
-                        overlayBlur: 'small',
-                    })}
-                >
-                    {children}
-                    {mounted && (
+                <CircleWalletProvider>
+                    <RainbowKitProvider
+                        theme={lightTheme({
+                            accentColor: '#2563eb',
+                            accentColorForeground: 'white',
+                            borderRadius: 'large',
+                            fontStack: 'system',
+                            overlayBlur: 'small',
+                        })}
+                    >
+                        {children}
+                        <CircleConnectModal />
+                        {mounted && (
                         <Toaster
                             position="bottom-right"
                             toastOptions={{
@@ -80,8 +84,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                                 },
                             }}
                         />
-                    )}
-                </RainbowKitProvider>
+                        )}
+                    </RainbowKitProvider>
+                </CircleWalletProvider>
             </QueryClientProvider>
         </WagmiProvider>
     );

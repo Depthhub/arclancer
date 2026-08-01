@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { CONTRACTS, ERC20_ABI } from '@/lib/contracts';
 import { parseUSDC } from '@/lib/utils';
 
@@ -11,7 +12,7 @@ export interface TaskMessage {
 }
 
 export function useAgentTask(agentId: number | string) {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [messages, setMessages] = useState<TaskMessage[]>([]);
     const [isRunning, setIsRunning] = useState(false);
     const [paywall, setPaywall] = useState<{ price: number; ownerWallet: string } | null>(null);

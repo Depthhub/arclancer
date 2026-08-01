@@ -36,6 +36,8 @@ import { runAgentLoop, handleAgentConfirmation, isAgentEnabled } from "@/lib/dea
 import { isHeavyTask, dispatchToWorker, isWorkerEnabled } from "@/lib/dealCopilot/openclawDispatch";
 import type { DealCopilotState } from "@/lib/dealCopilot/types";
 import type { JsonStore } from "@/lib/dealCopilot/storage";
+import { executeAgentTask } from "@/lib/dealCopilot/agentTools";
+import type { AgentMeta } from "@/lib/agents/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // seconds — needed for on-chain transactions
@@ -1046,11 +1048,15 @@ export async function POST(req: Request) {
           if (result.success) {
               const agentId = result.contractAddress;
               
-              // Save off-chain metadata (System Prompt, API key) to the JSON store securely
+              // Save public pointers and routing metadata only.
               if (agentId) {
                 await store.setJSON(`agent_meta:${agentId}`, {
-                  systemPrompt: agentReg.systemPrompt || "You are a helpful AI assistant.",
-                  toolApiKey: agentReg.toolApiKey || "",
+                  name: agentReg.name,
+                  skill_uri: agentReg.skillUri,
+                  content_hash: agentReg.contentHash,
+                  execution_mode: agentReg.executionMode || "inbox",
+                  mcp_endpoint: agentReg.executionMode === "creator_mcp" ? agentReg.mcpEndpoint : undefined,
+                  price: agentReg.fee,
                   creatorId: cbq.from.id,
                   ownerWallet: wallet.address
                 }, 60 * 60 * 24 * 365);
@@ -1309,24 +1315,29 @@ export async function POST(req: Request) {
     if (/^\/createagent\b/i.test(trimmedText)) {
       after(async () => {
         try {
-          // Format expected: /createagent <AgentName> | <skills,comma,separated> | <Custom System Prompt> | <PriceInUSDC>
+          // Format: /createagent <name> | <skill> | <skill_uri> | <fee> | [inbox|creator_mcp] | [mcp_endpoint]
           const parts = trimmedText.replace(/^\/createagent\s*/i, "").split("|").map(s => s.trim());
-          if (parts.length < 3) {
+          if (parts.length < 4) {
             await telegramSendMessage({
               token, chatId, reply: {
-                text: "❌ **Invalid Format**\n\nPlease use exactly this format:\n`/createagent AgentName | skill1,skill2 | Your custom instructions | [Optional Price]`\n\n_Example:_\n`/createagent DeFiAuditor | auditor, researcher | You are a DeFi expert | 5`",
+                text: "❌ **Invalid Format**\n\n`/createagent Name | skill | skill_uri | fee | [inbox|creator_mcp] | [mcp_endpoint]`\n\n_Example:_\n`/createagent DeFiAuditor | auditor | ipfs://bafy... | 5 | inbox`",
                 parseMode: "Markdown"
               }
             });
             return;
           }
 
-          const [agentName, skillsStr, systemPrompt, priceStr] = parts;
+          const [agentName, skillsStr, skillUri, priceStr, modeStr, mcpEndpoint] = parts;
           const skills = skillsStr.split(",").map(s => {
             const trimmed = s.trim();
             return trimmed.toLowerCase().startsWith("http") ? trimmed : trimmed.toLowerCase();
           });
           const price = parseFloat(priceStr || "0") || 0;
+          const executionMode = modeStr === "creator_mcp" ? "creator_mcp" : "inbox";
+          if (executionMode === "creator_mcp" && !mcpEndpoint) {
+            await telegramSendMessage({ token, chatId, reply: { text: "❌ `mcp_endpoint` is required for `creator_mcp`." } });
+            return;
+          }
           
           // Guarantee the creator has a wallet so they can get paid!
           const ownerWalletObj = await getOrCreateWallet(store, fromId);
@@ -1337,7 +1348,9 @@ export async function POST(req: Request) {
           
           const brainData = {
             name: agentName,
-            systemPrompt,
+            skill_uri: skillUri,
+            execution_mode: executionMode,
+            mcp_endpoint: executionMode === "creator_mcp" ? mcpEndpoint : undefined,
             skills,
             price,
             creatorId: fromId,
@@ -1445,11 +1458,11 @@ export async function POST(req: Request) {
 
     // User explicitly invoking a custom agent
     const agentMatch = trimmedText.match(/^\/agent\s+(\d+)\s+(.*)/i);
-    if (agentMatch && isWorkerEnabled()) {
+    if (agentMatch) {
       try {
         const agentId = agentMatch[1];
         const taskText = agentMatch[2];
-        const meta = await store.getJSON<any>(`agent_meta:${agentId}`);
+        const meta = await store.getJSON<AgentMeta>(`agent_meta:${agentId}`);
         if (!meta) {
           await telegramSendMessage({ token, chatId, reply: { text: `❌ **Agent ${agentId} not found**`, parseMode: "Markdown" } });
           return NextResponse.json({ ok: true });
@@ -1473,8 +1486,8 @@ export async function POST(req: Request) {
         }
 
         await telegramSendMessage({ token, chatId, reply: { text: `🤖 **Dispatching to ${meta.name || "Custom Agent"}**...\n\n_Agent is booting up its skills to process your task._`, parseMode: "Markdown" } });
-        const workerResponse = await dispatchToWorker(taskText, chatId, fromId, store, agentId);
-        await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
+        const routing = await executeAgentTask(store, fromId, agentId, taskText);
+        await telegramSendMessage({ token, chatId, reply: { text: routing.message } });
       } catch (e) {
         console.error("[dealCopilot] specific agent dispatch failed", e);
       }
@@ -1483,7 +1496,12 @@ export async function POST(req: Request) {
 
     if (/^\/pay\b/i.test(trimmedText)) {
       try {
-        const pendingPayment = await store.getJSON<any>(`agent_pending_payment:${fromId}`);
+        const pendingPayment = await store.getJSON<{
+          agentId: string;
+          taskText: string;
+          price: number;
+          ownerWallet: string;
+        }>(`agent_pending_payment:${fromId}`);
         if (!pendingPayment) {
            await telegramSendMessage({ token, chatId, reply: { text: `❌ No pending agent payments found.` } });
            return NextResponse.json({ ok: true });
@@ -1504,8 +1522,8 @@ export async function POST(req: Request) {
         if (txRes.success) {
            await store.del(`agent_pending_payment:${fromId}`);
            await telegramSendMessage({ token, chatId, reply: { text: `✅ **Payment Successful!**\n\n🤖 **Dispatching Agent**...`, parseMode: "Markdown" } });
-           const workerResponse = await dispatchToWorker(taskText, chatId, fromId, store, agentId);
-           await telegramSendMessage({ token, chatId, reply: { text: workerResponse } });
+           const routing = await executeAgentTask(store, fromId, agentId, taskText);
+           await telegramSendMessage({ token, chatId, reply: { text: routing.message } });
         } else {
            await telegramSendMessage({ token, chatId, reply: { text: `❌ **Payment Failed**\n\nError: ${txRes.error}\n\nPlease check your USDC balance using /status.`, parseMode: "Markdown" } });
         }

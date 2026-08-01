@@ -4,6 +4,10 @@
  */
 import type { JsonStore } from "@/lib/dealCopilot/storage";
 import type { DealCopilotState, DealDraft, AgentPendingAction, AgentPendingActionType } from "@/lib/dealCopilot/types";
+import {
+  userContextToToolContext,
+  type UserContext,
+} from "../../../../shared/src/context/UserContext.js";
 import { formatDollars } from "@/lib/utils";
 import { randomId } from "@/lib/dealCopilot/crypto";
 import {
@@ -26,6 +30,7 @@ import {
   getAgenticJobInfo,
 } from "@/lib/dealCopilot/arcAgent";
 import { getDealTtlSeconds } from "@/lib/dealCopilot/engine";
+import type { AgentTaskRouting } from "@/lib/agents/types";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -326,9 +331,30 @@ export async function executeRegisterAgentIdentity(
     name: string;
     skill: string;
     fee?: number;
-    skill_url?: string;
+    skill_uri: string;
+    content_hash?: string;
+    execution_mode?: "inbox" | "creator_mcp";
+    mcp_endpoint?: string;
   }
 ): Promise<string> {
+  if (!params.skill_uri?.trim()) {
+    return "❌ skill_uri is required. Store a public pointer, not a full prompt.";
+  }
+  if (!/^(https:\/\/|ipfs:\/\/|ar:\/\/)/i.test(params.skill_uri.trim())) {
+    return "❌ skill_uri must use HTTPS, IPFS, or Arweave.";
+  }
+  if (params.content_hash && !/^[a-fA-F0-9]{64}$/.test(params.content_hash)) {
+    return "❌ content_hash must be a SHA-256 hex digest.";
+  }
+  if (params.execution_mode === "creator_mcp" && !params.mcp_endpoint?.trim()) {
+    return "❌ mcp_endpoint is required when execution_mode is creator_mcp.";
+  }
+  if (
+    params.execution_mode === "creator_mcp" &&
+    !/^https:\/\//i.test(params.mcp_endpoint?.trim() ?? "")
+  ) {
+    return "❌ mcp_endpoint must use HTTPS.";
+  }
   // Auto-save pending action and trigger confirmation
   const key = storeKey(chatId);
   const state = await store.getJSON<DealCopilotState>(key);
@@ -343,7 +369,10 @@ export async function executeRegisterAgentIdentity(
       name: params.name,
       skill: params.skill,
       fee,
-      skill_url: params.skill_url || "",
+      skill_uri: params.skill_uri,
+      content_hash: params.content_hash || "",
+      execution_mode: params.execution_mode || "inbox",
+      mcp_endpoint: params.mcp_endpoint || "",
     },
     description: `Register agent "${params.name}" on ArcLancer Marketplace with fee $${fee} USDC`,
   };
@@ -355,7 +384,8 @@ export async function executeRegisterAgentIdentity(
     `• Skill: ${params.skill}`,
     `• Fee: $${fee} USDC per task`,
   ];
-  if (params.skill_url) lines.push(`• Skill URL: ${params.skill_url}`);
+  lines.push(`• Skill URI: ${params.skill_uri}`);
+  lines.push(`• Execution: ${params.execution_mode || "inbox"}`);
   lines.push(`\nThis will mint an on-chain agent NFT on Arc Testnet.`);
   return lines.join("\n");
 }
@@ -477,98 +507,35 @@ export async function executeSearchRegisteredAgents(): Promise<string> {
 
 export async function executeAgentTask(
   store: JsonStore,
-  fromId: number,
+  _fromId: number,
   agentId: string,
-  taskDescription: string
-): Promise<string> {
-  try {
-    // Step 1: Fetch agent memory
-    const metaStr = await store.getJSON<any>(`agent_meta:${agentId}`);
-    if (!metaStr) {
-      console.error(`[executeAgentTask] agent_meta:${agentId} returned null from store`);
-      return `❌ Agent memory not found for ID ${agentId}. The agent's brain was not saved during registration, or the storage backend was unavailable.`;
-    }
+  _taskDescription: string
+): Promise<AgentTaskRouting> {
+  void _taskDescription;
+  const meta = await store.getJSON<{
+    skill_uri?: string;
+    content_hash?: string;
+    execution_mode?: "inbox" | "creator_mcp";
+    mcp_endpoint?: string;
+  }>(`agent_meta:${agentId}`);
 
-    let systemPrompt = metaStr.systemPrompt || "You are a helpful AI assistant.";
-    
-    // Automatically fetch content if it's a URL (External Skill Injection)
-    if (systemPrompt.startsWith("http")) {
-      try {
-        const res = await fetch(systemPrompt);
-        systemPrompt = await res.text();
-      } catch {
-        return `❌ Execution Failed: Could not load the external skill logic from the provided URL.`;
-      }
-    }
-
-    // Step 2: Resolve API key
-    const apiKey = process.env.DIGITALOCEAN_API_KEY || "";
-    if (!apiKey) {
-      return `❌ No API key available. The server needs a DIGITALOCEAN_API_KEY environment variable.`;
-    }
-
-    const url = "https://inference.do-ai.run/v1/chat/completions";
-    let modelsToTry = ["anthropic-claude-4.5-sonnet", "openai-gpt-4o-mini", "deepseek-3.2", "deepseek-4-flash", "llama3.3-70b-instruct"];
-
-    console.log(`[executeAgentTask] Calling DigitalOcean for agent ${agentId}`);
-
-    let res: Response | null = null;
-    let lastError = "";
-
-    for (const model of modelsToTry) {
-      try {
-        res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: taskDescription }
-            ],
-            max_tokens: 3000
-          })
-        });
-
-        if (!res.ok) {
-          const errorBody = await res.text().catch(() => "unknown");
-          lastError = `${res.status}: ${errorBody.slice(0, 300)}`;
-          console.error(`[executeAgentTask] ${model} failed with ${res.status}, trying next...`);
-          if (res.status === 401 || res.status === 403 || res.status === 400 || res.status === 429) {
-            modelsToTry = modelsToTry.filter(m => m !== model);
-            continue;
-          }
-          break; // Stop on unknown errors
-        }
-        
-        break; // Success!
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : "Network error";
-        console.error(`[executeAgentTask] Fetch error on ${model}: ${lastError}, trying next...`);
-        continue;
-      }
-    }
-
-    if (!res || !res.ok) {
-      return `❌ Agent execution failed: AI API returned errors. Last error: ${lastError}`;
-    }
-
-    const data = await res.json();
-    if (!data.choices?.[0]?.message?.content) {
-      console.error(`[executeAgentTask] Unexpected API response:`, JSON.stringify(data).slice(0, 300));
-      return `❌ Agent execution failed: AI returned an unexpected response format.`;
-    }
-    const output = data.choices[0].message.content;
-
-    return `🧠 **Agent Execution Complete!**\n\nThe registered AI Agent processed your task using its unique skill pipeline.\n\n**Output:**\n${output}`;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error(`[executeAgentTask] Exception:`, msg);
-    return `❌ Agent Execution failed: ${msg.slice(0, 200)}`;
+  const executionMode = meta?.execution_mode ?? "inbox";
+  if (executionMode === "creator_mcp" && meta?.mcp_endpoint) {
+    return {
+      executionMode,
+      skillUri: meta.skill_uri,
+      contentHash: meta.content_hash,
+      mcpEndpoint: meta.mcp_endpoint,
+      message: "Route this task to the creator-hosted MCP endpoint. ArcLancer does not fetch the skill URI or execute the agent.",
+    };
   }
+
+  return {
+    executionMode: "inbox",
+    skillUri: meta?.skill_uri,
+    contentHash: meta?.content_hash,
+    message: "Deliver this task to the creator inbox. ArcLancer does not fetch the skill URI or execute the agent.",
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -622,7 +589,7 @@ export async function executeTool(
       case "search_registered_agents":
         return await executeSearchRegisteredAgents();
       case "execute_agent_task":
-        return await executeAgentTask(context.store, context.fromId, (args as Record<string, string>).agent_id, (args as Record<string, string>).task_description);
+        return JSON.stringify(await executeAgentTask(context.store, context.fromId, (args as Record<string, string>).agent_id, (args as Record<string, string>).task_description));
       default:
         return `Unknown tool: ${toolName}`;
     }
@@ -631,3 +598,15 @@ export async function executeTool(
     return `Tool error (${toolName}): ${msg.slice(0, 300)}`;
   }
 }
+
+/** MCP / shared entry — maps UserContext to Telegram-style tool context */
+export async function executeToolForUser(
+  toolName: string,
+  args: Record<string, unknown>,
+  user: UserContext,
+  store: JsonStore
+): Promise<string> {
+  return executeTool(toolName, JSON.stringify(args ?? {}), userContextToToolContext(user, store));
+}
+
+export type { UserContext };

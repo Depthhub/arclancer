@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { CONTRACTS, REGISTRY_ABI } from '@/lib/contracts';
 import { parseUSDC } from '@/lib/utils';
 
 export function useUpdateAgent() {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [error, setError] = useState<string | null>(null);
 
     const { writeContractAsync, data: txHash, isPending } = useWriteContract();

@@ -1,9 +1,9 @@
 'use client';
 
-import { useAccount } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { useAgents } from './useAgents';
 
 export function useMyAgents() {
-    const { address } = useAccount();
+    const { address } = useWallet();
     return useAgents({ owner: address });
 }

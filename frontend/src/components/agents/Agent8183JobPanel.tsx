@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWallet } from '@/hooks/useWallet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,7 +17,7 @@ interface Agent8183JobPanelProps {
 }
 
 export function Agent8183JobPanel({ agent }: Agent8183JobPanelProps) {
-    const { address } = useAccount();
+    const { address } = useWallet();
     const [description, setDescription] = useState('');
     const [budget, setBudget] = useState(String(agent.taskFeeUsdc || 10));
     const [jobId, setJobId] = useState<string | null>(null);
