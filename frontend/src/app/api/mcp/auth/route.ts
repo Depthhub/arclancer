@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     token,
-    mcpUrl: 'https://mcp.arclancer.xyz/mcp',
+    mcpUrl: process.env.NEXT_PUBLIC_MCP_URL?.trim() || 'https://arclancer.xyz/mcp',
     walletAddress: wallet.address,
   });
 }

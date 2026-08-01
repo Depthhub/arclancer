@@ -14,7 +14,8 @@ import {
 import { ConnectorTokenCard } from '@/components/wallet/ConnectorTokenCard';
 import { PlatformInstallButton } from '@/components/wallet/PlatformInstallButton';
 
-const MCP_URL = 'https://mcp.arclancer.xyz/mcp';
+const MCP_URL =
+    process.env.NEXT_PUBLIC_MCP_URL?.trim() || 'https://arclancer.xyz/mcp';
 const CHATGPT_INSTALL_URL =
     process.env.NEXT_PUBLIC_CHATGPT_INSTALL_URL?.trim() || 'https://chatgpt.com/plugins';
 const CLAUDE_INSTALL_URL =

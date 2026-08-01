@@ -49,7 +49,7 @@ interface OAuthIdentity extends OAuthRefreshGrant {
 }
 
 function publicOrigin() {
-  return (process.env.MCP_PUBLIC_ORIGIN?.trim() || "https://mcp.arclancer.xyz").replace(/\/$/, "");
+  return (process.env.MCP_PUBLIC_ORIGIN?.trim() || "https://arclancer.xyz").replace(/\/$/, "");
 }
 
 function appOrigin() {
