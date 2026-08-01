@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
 
   // Experimental optimizations
   experimental: {
+    externalDir: true,
     // Optimize package imports to reduce bundle size
     optimizePackageImports: [
       'lucide-react',

@@ -8,6 +8,7 @@
  */
 import { createPublicClient, http, parseAbiItem, type Address, type PublicClient } from "viem";
 import { CONTRACTS, ESCROW_ABI, FACTORY_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { fetchRegisteredAgents as fetchAgentsFromRegistry } from "@/lib/agents/registry";
 import { formatDollars } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -168,8 +169,7 @@ export async function fetchUserContracts(walletAddress: string): Promise<string[
  * Fetch all registered AI agents from the AgentRegistry contract.
  */
 export async function fetchRegisteredAgents(): Promise<OnchainAgent[]> {
-    const { fetchRegisteredAgents: fetchAgents } = await import("../agents/registry.js");
-    return fetchAgents();
+    return fetchAgentsFromRegistry();
 }
 
 /* ------------------------------------------------------------------ */

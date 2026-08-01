@@ -7,7 +7,7 @@ import type { DealCopilotState, DealDraft, AgentPendingAction, AgentPendingActio
 import {
   userContextToToolContext,
   type UserContext,
-} from "../../../../shared/src/context/UserContext.js";
+} from "@/lib/mcp/userContext";
 import { formatDollars } from "@/lib/utils";
 import { randomId } from "@/lib/dealCopilot/crypto";
 import {
