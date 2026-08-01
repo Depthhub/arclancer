@@ -54,6 +54,12 @@ export class FileStore implements JsonStore {
     return entry.value as T;
   }
 
+  async getdelJSON<T>(key: string): Promise<T | null> {
+    const value = await this.getJSON<T>(key);
+    if (value !== null) await this.del(key);
+    return value;
+  }
+
   async setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     this.data[key] = { value, expiresAt: Date.now() + ttlSeconds * 1000 };
     this.scheduleSave();

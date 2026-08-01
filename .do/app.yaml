@@ -71,6 +71,9 @@ services:
       - key: NEXT_PUBLIC_CIRCLE_WALLETS_ENABLED
         value: "true"
         scope: RUN_AND_BUILD_TIME
+      - key: NEXT_PUBLIC_CHATGPT_INSTALL_URL
+        value: "https://chatgpt.com/plugins"
+        scope: RUN_AND_BUILD_TIME
       - key: ARC_NETWORK
         value: "testnet"
         scope: RUN_TIME
@@ -95,11 +98,19 @@ services:
       - path: /mcp
       - path: /health
       - path: /creator-tickets
+      - path: /oauth
+      - path: /.well-known
     envs:
       - key: MCP_HTTP_PORT
         value: "3100"
         scope: RUN_TIME
       - key: NEXT_PUBLIC_APP_URL
+        value: "https://arclancer.xyz"
+        scope: RUN_TIME
+      - key: MCP_PUBLIC_ORIGIN
+        value: "https://mcp.arclancer.xyz"
+        scope: RUN_TIME
+      - key: APP_PUBLIC_ORIGIN
         value: "https://arclancer.xyz"
         scope: RUN_TIME
       - key: NEXT_PUBLIC_ARC_TESTNET_RPC_URL

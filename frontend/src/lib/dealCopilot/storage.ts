@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 
 export interface JsonStore {
   getJSON<T>(key: string): Promise<T | null>;
+  getdelJSON<T>(key: string): Promise<T | null>;
   setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void>;
   del(key: string): Promise<void>;
   rpush(key: string, value: unknown): Promise<void>;
@@ -63,6 +64,12 @@ class FileStore implements JsonStore {
       return null;
     }
     return entry.value as T;
+  }
+
+  async getdelJSON<T>(key: string): Promise<T | null> {
+    const value = await this.getJSON<T>(key);
+    if (value !== null) await this.del(key);
+    return value;
   }
 
   async setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void> {
@@ -134,6 +141,18 @@ class UpstashRestStore implements JsonStore {
     }
   }
 
+  async getdelJSON<T>(key: string): Promise<T | null> {
+    const json = await this.call(`getdel/${encodeURIComponent(key)}`);
+    const value =
+      typeof json === "object" && json !== null && "result" in json ? (json as { result?: unknown }).result : null;
+    if (typeof value !== "string") return null;
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return null;
+    }
+  }
+
   async setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     await this.call(`set/${encodeURIComponent(key)}`, {
       body: JSON.stringify(value),
@@ -170,6 +189,15 @@ function resilientStore(primary: JsonStore, fallback: JsonStore): JsonStore {
       } catch (e) {
         console.error("[dealCopilot] store.getJSON failed, falling back:", e);
         return await fallback.getJSON<T>(key);
+      }
+    },
+    async getdelJSON<T>(key: string) {
+      if (process.env.NODE_ENV === "production") return primary.getdelJSON<T>(key);
+      try {
+        return await primary.getdelJSON<T>(key);
+      } catch (e) {
+        console.error("[dealCopilot] store.getdelJSON failed, falling back:", e);
+        return await fallback.getdelJSON<T>(key);
       }
     },
     async setJSON(key: string, value: unknown, ttlSeconds: number) {
@@ -229,6 +257,7 @@ export function getJsonStore(): JsonStore {
   if (process.env.NODE_ENV === "production") {
     return {
       async getJSON() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
+      async getdelJSON() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
       async setJSON() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
       async del() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); },
       async rpush() { throw new Error("PRODUCTION ARCHITECTURE ERROR: Persistent Upstash Backend missing inside Vercel Config."); }

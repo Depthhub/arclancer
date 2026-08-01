@@ -44,6 +44,7 @@ type CircleWalletContextValue = {
   executeContract: (params: Omit<CircleContractExecutionParams, 'walletId'>) => Promise<string | undefined>;
   createConnectorToken: () => Promise<{ token: string; mcpUrl: string; walletAddress: string }>;
   fundWallet: () => Promise<{ mode?: string; checkoutUrl?: string }>;
+  resolveOAuthRequest: (requestId: string, approved: boolean) => Promise<string>;
 };
 
 const CircleWalletContext = createContext<CircleWalletContextValue | null>(null);
@@ -402,6 +403,27 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
     return result as { mode?: string; checkoutUrl?: string };
   }, [address, refreshWallets]);
 
+  const resolveOAuthRequest = useCallback(
+    async (requestId: string, approved: boolean) => {
+      if (approved && !session) throw new Error('Connect your Circle wallet first');
+      const response = await fetch('/api/mcp/oauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId,
+          approved,
+          userToken: approved ? session?.userToken : undefined,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.redirectTo !== 'string') {
+        throw new Error(data.error || 'Failed to complete connector authorization');
+      }
+      return data.redirectTo as string;
+    },
+    [session]
+  );
+
   const disconnect = useCallback(() => {
     setSession(null);
     setWallet(null);
@@ -438,6 +460,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       executeContract,
       createConnectorToken,
       fundWallet,
+      resolveOAuthRequest,
     }),
     [
       enabled,
@@ -459,6 +482,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       executeContract,
       createConnectorToken,
       fundWallet,
+      resolveOAuthRequest,
     ]
   );
 
@@ -496,6 +520,9 @@ export function useCircleWallet() {
         throw new Error('Circle wallet is not enabled');
       },
       fundWallet: async () => {
+        throw new Error('Circle wallet is not enabled');
+      },
+      resolveOAuthRequest: async () => {
         throw new Error('Circle wallet is not enabled');
       },
     } satisfies Partial<CircleWalletContextValue> & { enabled: false };

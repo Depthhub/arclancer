@@ -18,6 +18,8 @@
     "developerName": "ArcLancer",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://arclancer.xyz",
+    "privacyPolicyURL": "https://arclancer.xyz/privacy",
+    "supportURL": "https://arclancer.xyz/support",
     "defaultPrompt": [
       "Use ArcLancer to find and hire a freelancer with milestone escrow.",
       "Use ArcLancer to create an AI agent marketplace profile.",

@@ -48,6 +48,20 @@ class UpstashRestStore implements JsonStore {
     }
   }
 
+  async getdelJSON<T>(key: string): Promise<T | null> {
+    const payload = await this.call(`getdel/${encodeURIComponent(key)}`);
+    const result =
+      payload && typeof payload === "object" && "result" in payload
+        ? (payload as { result?: unknown }).result
+        : null;
+    if (typeof result !== "string") return null;
+    try {
+      return JSON.parse(result) as T;
+    } catch {
+      return null;
+    }
+  }
+
   async setJSON(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     await this.call(
       `set/${encodeURIComponent(key)}`,

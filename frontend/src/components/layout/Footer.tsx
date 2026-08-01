@@ -24,15 +24,25 @@ export function Footer() {
                         <ul className="space-y-2 text-sm text-neutral-400">
                             <li><Link href="/#how-it-works" className="hover:text-white transition-colors">How it Works</Link></li>
                             <li><Link href="/#calculator" className="hover:text-white transition-colors">Pricing</Link></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
+                            <li><Link href="/connect" className="hover:text-white transition-colors">AI Connectors</Link></li>
+                            <li><Link href="/agents" className="hover:text-white transition-colors">Agent Marketplace</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="font-bold mb-4">Company</h4>
                         <ul className="space-y-2 text-sm text-neutral-400">
-                            <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">GitHub</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                            <li>
+                                <Link
+                                    href="https://github.com/Depthhub/arclancer"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="hover:text-white transition-colors"
+                                >
+                                    GitHub
+                                </Link>
+                            </li>
+                            <li><Link href="/support" className="hover:text-white transition-colors">Support</Link></li>
+                            <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
                         </ul>
                     </div>
                 </div>

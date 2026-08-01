@@ -11,6 +11,8 @@ export interface UserContext {
   /** Circle user-controlled wallet linked to this MCP identity. */
   walletAddress?: `0x${string}`;
   circleWalletId?: string;
+  /** OAuth scopes. Undefined indicates a trusted legacy/manual connector. */
+  scopes?: string[];
 }
 
 export interface ToolExecutionContext {
@@ -42,7 +44,7 @@ function hashToUserId(input: string): number {
 /** Build a stable UserContext for MCP stdio/HTTP sessions */
 export function createMcpUserContext(
   sessionId?: string,
-  wallet?: { address?: string; walletId?: string }
+  wallet?: { address?: string; walletId?: string; scopes?: string[] }
 ): UserContext {
   const sid =
     sessionId?.trim() ||
@@ -58,6 +60,7 @@ export function createMcpUserContext(
         ? (wallet.address as `0x${string}`)
         : undefined,
     circleWalletId: wallet?.walletId,
+    scopes: wallet?.scopes,
   };
 }
 

@@ -12,8 +12,15 @@ import {
     TriangleAlert,
 } from 'lucide-react';
 import { ConnectorTokenCard } from '@/components/wallet/ConnectorTokenCard';
+import { PlatformInstallButton } from '@/components/wallet/PlatformInstallButton';
 
 const MCP_URL = 'https://mcp.arclancer.xyz/mcp';
+const CHATGPT_INSTALL_URL =
+    process.env.NEXT_PUBLIC_CHATGPT_INSTALL_URL?.trim() || 'https://chatgpt.com/plugins';
+const CLAUDE_INSTALL_URL =
+    `https://claude.ai/customize/connectors?modal=add-custom-connector` +
+    `&connectorName=${encodeURIComponent('ArcLancer')}` +
+    `&connectorUrl=${encodeURIComponent(MCP_URL)}`;
 
 export const metadata: Metadata = {
     title: 'Connect ArcLancer to ChatGPT or Claude',
@@ -21,19 +28,17 @@ export const metadata: Metadata = {
 };
 
 const chatGptSteps = [
-    'Connect your Circle wallet above and generate a private ArcLancer connector token.',
-    'In ChatGPT on the web, open Settings → Apps → Advanced settings and enable Developer mode. Your workspace admin may need to allow custom MCP apps first.',
-    'Open Workspace settings → Apps and choose Create.',
-    `Name the app “ArcLancer”, enter ${MCP_URL}, and use the generated token as Bearer authentication.`,
-    'Create the app, review its tools, then enable ArcLancer in a new chat.',
+    'Open ChatGPT Plugins and enable Developer mode if ArcLancer is not yet listed for your account.',
+    `Create an app named “ArcLancer” and enter ${MCP_URL}. ChatGPT will discover ArcLancer OAuth automatically.`,
+    'Select Connect, sign in to your Circle wallet on ArcLancer, review the requested permissions, and approve.',
+    'Enable ArcLancer in a new chat and keep confirmation enabled for write tools.',
 ];
 
 const claudeSteps = [
-    'Connect your Circle wallet above and generate a private ArcLancer connector token.',
-    'In Claude, open Customize → Connectors.',
-    'Select +, then Add custom connector.',
-    `Enter “ArcLancer” as the name, ${MCP_URL} as the URL, and the generated token when prompted for authentication.`,
-    'Select Add, connect it, and enable ArcLancer for your conversation.',
+    'Select the button below to open Claude’s Add custom connector dialog with ArcLancer prefilled.',
+    'Review the connector name and MCP URL, then select Add and Connect.',
+    'Sign in to your Circle wallet on ArcLancer, review the requested permissions, and approve.',
+    'Enable ArcLancer for your conversation.',
 ];
 
 function SetupCard({
@@ -42,12 +47,18 @@ function SetupCard({
     steps,
     icon,
     docsHref,
+    actionHref,
+    actionLabel,
+    actionCopyText,
 }: {
     title: string;
     subtitle: string;
     steps: string[];
     icon: React.ReactNode;
     docsHref: string;
+    actionHref: string;
+    actionLabel: string;
+    actionCopyText?: string;
 }) {
     return (
         <article className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
@@ -82,6 +93,7 @@ function SetupCard({
                     </li>
                 ))}
             </ol>
+            <PlatformInstallButton href={actionHref} label={actionLabel} copyText={actionCopyText} />
         </article>
     );
 }
@@ -117,9 +129,6 @@ export default function ConnectPage() {
             </section>
 
             <main className="mx-auto max-w-5xl px-6 py-12 sm:py-16">
-                <div className="mb-8">
-                    <ConnectorTokenCard />
-                </div>
                 <div className="grid gap-6 lg:grid-cols-2">
                     <SetupCard
                         title="ChatGPT"
@@ -127,6 +136,9 @@ export default function ConnectPage() {
                         steps={chatGptSteps}
                         icon={<Bot className="h-6 w-6" />}
                         docsHref="https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
+                        actionHref={CHATGPT_INSTALL_URL}
+                        actionLabel="Open ChatGPT Plugins"
+                        actionCopyText={MCP_URL}
                     />
                     <SetupCard
                         title="Claude"
@@ -134,8 +146,23 @@ export default function ConnectPage() {
                         steps={claudeSteps}
                         icon={<MessageSquare className="h-6 w-6" />}
                         docsHref="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
+                        actionHref={CLAUDE_INSTALL_URL}
+                        actionLabel="Add to Claude"
                     />
                 </div>
+
+                <details className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5">
+                    <summary className="cursor-pointer text-sm font-semibold text-neutral-900">
+                        Advanced: create a manual connector token
+                    </summary>
+                    <p className="mt-2 text-sm text-neutral-500">
+                        Only use this fallback with clients that support a custom Authorization header. ChatGPT uses
+                        the OAuth flow above.
+                    </p>
+                    <div className="mt-5">
+                        <ConnectorTokenCard />
+                    </div>
+                </details>
 
                 <section className="mt-10 overflow-hidden rounded-3xl bg-neutral-900 text-white">
                     <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_1.35fr]">

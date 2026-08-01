@@ -61,6 +61,40 @@ https://mcp.arclancer.xyz/mcp
 
 Setup instructions for ChatGPT and Claude are available at [arclancer.xyz/connect](https://arclancer.xyz/connect).
 
+### OAuth and permissions
+
+The hosted endpoint uses OAuth 2.1 authorization-code flow with S256 PKCE, dynamic client registration, protected-resource metadata, and refresh-token rotation. Clients discover the configuration from:
+
+- `https://mcp.arclancer.xyz/.well-known/oauth-protected-resource`
+- `https://mcp.arclancer.xyz/.well-known/oauth-authorization-server`
+
+ArcLancer requests only these OAuth scopes:
+
+- `arclancer:read` — view wallets, balances, marketplace listings, jobs, agents, and escrow state.
+- `arclancer:write` — create or change jobs, agents, escrows, disputes, and payment-related state. Write operations remain confirmation-gated.
+
+The public [privacy policy](https://arclancer.xyz/privacy) describes connector data handling. For help, use the [ArcLancer support page](https://arclancer.xyz/support) or the [support issue tracker](https://github.com/Depthhub/arclancer/issues).
+
+### Install in Claude
+
+Use the supported prefilled custom-connector link:
+
+[Add ArcLancer to Claude](https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=ArcLancer&connectorUrl=https%3A%2F%2Fmcp.arclancer.xyz%2Fmcp)
+
+The link pre-fills the name and MCP URL; it never bypasses Claude's review and approval. Team and Enterprise organization owners must add the connector before members can enable it.
+
+### Submit to ChatGPT
+
+Until ArcLancer is listed, test it through ChatGPT Developer mode using the universal MCP URL `https://mcp.arclancer.xyz/mcp` and OAuth. In the OpenAI plugin submission portal:
+
+1. Add the universal MCP URL, select OAuth, and scan the tools.
+2. Provide the plugin name, logo, description, company URL, privacy policy URL, support contact, tool details, test prompts/responses, localization details, and review credentials.
+3. Confirm the company, privacy, support, MCP, and OAuth URLs are publicly reachable and return successful responses.
+4. Verify the organization, confirm all submission requirements, and submit for review.
+5. After approval, set `NEXT_PUBLIC_CHATGPT_INSTALL_URL` on the frontend deployment to the official ArcLancer plugin listing/install URL. Before approval, use `https://chatgpt.com/plugins` as the fallback.
+
+The configured install URL affects only the `/connect` call-to-action; it does not change the OAuth redirect URI or MCP endpoint.
+
 To run the HTTP transport locally:
 
 ```bash
@@ -137,6 +171,9 @@ Tool definitions: [`shared/src/tools/definitions.ts`](../shared/src/tools/defini
 | `OPENCLAW_WORKER_URL` | No | For GitHub verification via worker |
 | `MCP_HTTP_PORT` | No | HTTP server port (default 3100) |
 | `MCP_API_KEY` | No | Bearer token for HTTP transport |
+| `MCP_PUBLIC_ORIGIN` | No | Public OAuth issuer origin (default `https://mcp.arclancer.xyz`) |
+| `APP_PUBLIC_ORIGIN` | No | Public app origin used for the OAuth consent screen (default `https://arclancer.xyz`) |
+| `NEXT_PUBLIC_CHATGPT_INSTALL_URL` | Frontend only | Post-approval ChatGPT plugin listing/install URL; fallback `https://chatgpt.com/plugins` |
 | `CREATOR_MCP_TICKET_SECRET` | For creator MCP | HMAC secret, at least 32 bytes |
 | `CREATOR_MCP_TICKET_TTL_SECONDS` | No | Ticket lifetime, clamped to 60–900 seconds (default 300) |
 | `CREATOR_MCP_REPLAY_TTL_SECONDS` | No | Consumed job retention, clamped to 15 minutes–1 year (default 30 days) |

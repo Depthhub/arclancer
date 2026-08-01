@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ALL_MCP_TOOLS } from "../../shared/src/tools/definitions.js";
+import { ALL_MCP_TOOLS, WRITE_TOOLS } from "../../shared/src/tools/definitions.js";
 import { jsonSchemaToZodShape } from "./zodFromJson.js";
 import { ArcLancerService } from "./service.js";
 import { MCP_PROMPTS, renderPrompt } from "./prompts.js";
@@ -21,6 +21,11 @@ export function createArcLancerMcpServer(user: UserContext, store: JsonStore): M
   );
 
   const service = new ArcLancerService(store, user);
+  const assertReadScope = () => {
+    if (user.scopes && !user.scopes.includes("arclancer:read")) {
+      throw new Error("OAuth scope arclancer:read is required");
+    }
+  };
 
   for (const tool of ALL_MCP_TOOLS) {
     server.registerTool(
@@ -30,6 +35,22 @@ export function createArcLancerMcpServer(user: UserContext, store: JsonStore): M
         inputSchema: jsonSchemaToZodShape(tool.inputSchema as Record<string, unknown>),
       },
       async (args: Record<string, unknown>) => {
+        if (user.scopes && !user.scopes.includes("arclancer:read")) {
+          return {
+            content: [{ type: "text" as const, text: "OAuth scope arclancer:read is required." }],
+            isError: true,
+          };
+        }
+        if (
+          user.scopes &&
+          WRITE_TOOLS.has(tool.name) &&
+          !user.scopes.includes("arclancer:write")
+        ) {
+          return {
+            content: [{ type: "text" as const, text: "OAuth scope arclancer:write is required." }],
+            isError: true,
+          };
+        }
         const result = await service.callTool(tool.name, args ?? {});
         return {
           content: [{ type: "text" as const, text: result.content }],
@@ -47,6 +68,7 @@ export function createArcLancerMcpServer(user: UserContext, store: JsonStore): M
       mimeType: "application/json",
     },
     async () => {
+      assertReadScope();
       const { text } = await service.readResource("arclancer://agents");
       return {
         contents: [{ uri: "arclancer://agents", mimeType: "application/json", text }],
@@ -62,6 +84,7 @@ export function createArcLancerMcpServer(user: UserContext, store: JsonStore): M
       mimeType: "application/json",
     },
     async () => {
+      assertReadScope();
       const jobs = await service.callTool("search_jobs", {});
       return {
         contents: [

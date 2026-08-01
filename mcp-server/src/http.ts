@@ -3,12 +3,14 @@
  */
 import "dotenv/config";
 import { createServer, type IncomingMessage } from "node:http";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpUserContext } from "../../shared/src/context/UserContext.js";
 import { getMcpStore } from "../../shared/src/store/upstashStore.js";
 import { createArcLancerMcpServer } from "./server.js";
 import { verifyCreatorJobTicket } from "./creatorTickets.js";
+import { resolveConnectorBearerToken, type ConnectorIdentity } from "./connectorAuth.js";
+import { handleOAuthRequest, oauthChallengeHeader } from "./oauth.js";
 
 const PORT = Number(process.env.MCP_HTTP_PORT ?? 3100);
 const API_KEY = process.env.MCP_API_KEY?.trim();
@@ -17,12 +19,6 @@ const replayTtlCandidate = Number(process.env.CREATOR_MCP_REPLAY_TTL_SECONDS);
 const CREATOR_MCP_REPLAY_TTL_SECONDS = Number.isFinite(replayTtlCandidate)
   ? Math.min(31_536_000, Math.max(900, Math.floor(replayTtlCandidate)))
   : 2_592_000;
-
-interface ConnectorIdentity {
-  subject: string;
-  walletAddress: string;
-  walletId: string;
-}
 
 const sessions = new Map<
   string,
@@ -51,7 +47,13 @@ async function getOrCreateSession(sessionId: string, identity?: ConnectorIdentit
 
   const user = createMcpUserContext(
     sessionId,
-    identity ? { address: identity.walletAddress, walletId: identity.walletId } : undefined
+    identity
+      ? {
+          address: identity.walletAddress,
+          walletId: identity.walletId,
+          scopes: identity.scope,
+        }
+      : undefined
   );
   const mcpServer = createArcLancerMcpServer(user, store);
   const transport = new StreamableHTTPServerTransport({
@@ -76,11 +78,8 @@ async function authenticate(
     };
   }
 
-  if (!token.startsWith("arc_")) return null;
-  const digest = createHash("sha256").update(token).digest("hex");
-  const identity = await store.getJSON<ConnectorIdentity>(`mcp:token:${digest}`);
-  if (!identity?.subject || !identity.walletAddress || !identity.walletId) return null;
-  return { sessionId: identity.subject, identity };
+  const resolved = await resolveConnectorBearerToken(token, store);
+  return resolved ?? null;
 }
 
 const httpServer = createServer(async (req, res) => {
@@ -89,6 +88,8 @@ const httpServer = createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true, service: "arclancer-mcp" }));
     return;
   }
+
+  if (await handleOAuthRequest(req, res, store)) return;
 
   if (req.method === "POST" && req.url === "/creator-tickets/verify") {
     try {
@@ -134,7 +135,10 @@ const httpServer = createServer(async (req, res) => {
 
   const authenticated = await authenticate(req);
   if (!authenticated) {
-    res.writeHead(401, { "Content-Type": "application/json" });
+    res.writeHead(401, {
+      "Content-Type": "application/json",
+      "WWW-Authenticate": oauthChallengeHeader(),
+    });
     res.end(JSON.stringify({ error: "Unauthorized" }));
     return;
   }
