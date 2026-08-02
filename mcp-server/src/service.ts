@@ -22,6 +22,7 @@ import { fetchContractDetails, fetchRegisteredAgents } from "../../frontend/src/
 import type { DealCopilotState, DealDraft } from "../../frontend/src/lib/dealCopilot/types.js";
 import { getDealTtlSeconds } from "../../frontend/src/lib/dealCopilot/engine.js";
 import { issueCreatorJobTicket } from "./creatorTickets.js";
+import { resolveFreelancerInput } from "../../frontend/src/lib/profile/resolveFreelancer.js";
 
 function storeKey(sessionId: string) {
   return `dealCopilot:state:${sessionId}`;
@@ -160,15 +161,35 @@ export class ArcLancerService {
           });
           return { content: JSON.stringify(filtered, null, 2), structured: filtered };
         }
+        case "lookup_profile": {
+          const resolved = await resolveFreelancerInput(String(args.username ?? ""));
+          if (!resolved.ok) {
+            return { content: resolved.error, isError: true };
+          }
+          const label = resolved.username ? `@${resolved.username}` : resolved.walletAddress;
+          return {
+            content: `${label} → ${resolved.walletAddress}`,
+            structured: {
+              username: resolved.username,
+              walletAddress: resolved.walletAddress,
+            },
+          };
+        }
         case "hire": {
-          if (args.freelancer_address && args.total_amount) {
+          const hasFreelancer = args.freelancer_username || args.freelancer_address;
+          if (hasFreelancer && args.total_amount) {
+            const milestones =
+              Array.isArray(args.milestones) && args.milestones.length > 0
+                ? args.milestones
+                : [{ amount: Number(args.total_amount) * 0.98, description: "Full delivery" }];
             return this.wrap(
               await executeToolForUser(
                 "create_deal_draft",
                 {
+                  freelancer_username: args.freelancer_username,
                   freelancer_address: args.freelancer_address,
                   total_amount: args.total_amount,
-                  milestones: args.milestones ?? [{ amount: Number(args.total_amount) * 0.98, description: "Full delivery" }],
+                  milestones,
                 },
                 this.user,
                 this.store as never
@@ -176,7 +197,7 @@ export class ArcLancerService {
             );
           }
           return {
-            content: "Provide freelancer_address and total_amount, or create a deal draft first.",
+            content: "Provide freelancer_username (e.g. samuel) and total_amount, or create a deal draft first.",
             isError: true,
           };
         }

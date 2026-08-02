@@ -37,7 +37,7 @@ export const AGENT_SYSTEM_PROMPT = `You are **ArcLancer Copilot**, an AI-powered
 ## Tool Usage Guidelines
 - For read-only queries (balance, status, contracts): execute immediately
 - For write operations (create, fund, approve, submit, dispute, cancel): ALWAYS request confirmation first using the request_confirmation tool
-- When creating a deal from natural language, extract: freelancer address, total amount, currency, milestone breakdown
+- When creating a deal from natural language, extract: freelancer username (e.g. samuel), total amount, currency, milestone breakdown
 - Platform fee is 2% of total — milestones must sum to (total - 2% fee)
 - If info is missing, ask the user — don't guess addresses or amounts
 
@@ -84,13 +84,18 @@ export const AGENT_TOOL_DEFINITIONS = [
     type: "function" as const,
     function: {
       name: "create_deal_draft",
-      description: "Create a new escrow deal draft with all the details. Extracts freelancer address, total amount, currency, and milestones from the conversation. The 2% platform fee is deducted from total — milestones must sum to (total * 0.98).",
+      description:
+        "Create a new escrow deal draft. Prefer freelancer_username (e.g. samuel); milestones must sum to (total * 0.98) after the 2% platform fee.",
       parameters: {
         type: "object",
         properties: {
+          freelancer_username: {
+            type: "string",
+            description: "ArcLancer username without @ (e.g. samuel). Preferred.",
+          },
           freelancer_address: {
             type: "string",
-            description: "The freelancer's Ethereum wallet address (0x...)",
+            description: "Fallback 0x wallet address if username is unknown.",
           },
           total_amount: {
             type: "number",
@@ -114,7 +119,7 @@ export const AGENT_TOOL_DEFINITIONS = [
             description: "Array of milestones. Their amounts must sum to (total_amount * 0.98).",
           },
         },
-        required: ["freelancer_address", "total_amount", "milestones"],
+        required: ["total_amount", "milestones"],
       },
     },
   },
@@ -141,7 +146,8 @@ export const AGENT_TOOL_DEFINITIONS = [
           },
           value: {
             type: "string",
-            description: "New value. For milestone: 'index amount description' (e.g. '2 500 Testing & QA')",
+            description:
+              "New value. For address: username (e.g. samuel) or 0x address. For milestone: 'index amount description'",
           },
         },
         required: ["field", "value"],

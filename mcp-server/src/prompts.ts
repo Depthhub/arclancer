@@ -47,7 +47,7 @@ export function renderPrompt(
                 "",
                 "Steps:",
                 "1. search_registered_agents or recommend_agents",
-                "2. create_deal_draft with milestones (must sum to 98% of total)",
+                "2. create_deal_draft with freelancer_username (e.g. samuel) and milestones (must sum to 98% of total)",
                 "3. show_deal_summary",
                 "4. request_confirmation for deploy_contract",
                 "5. create_escrow then fund_escrow",

@@ -30,6 +30,7 @@ import {
   getAgenticJobInfo,
 } from "@/lib/dealCopilot/arcAgent";
 import { getDealTtlSeconds } from "@/lib/dealCopilot/engine";
+import { resolveFreelancerInput } from "@/lib/profile/resolveFreelancer";
 import type { AgentTaskRouting } from "@/lib/agents/types";
 
 /* ------------------------------------------------------------------ */
@@ -42,6 +43,26 @@ function storeKey(chatId: string) {
 
 function looksLikeEthAddress(s: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(s.trim());
+}
+
+function formatFreelancerLine(d: DealDraft): string {
+  if (d.freelancerUsername) return `👷 Freelancer: @${d.freelancerUsername}`;
+  if (d.freelancerAddress) return `👷 Freelancer: \`${d.freelancerAddress}\``;
+  return `👷 Freelancer: (missing)`;
+}
+
+async function resolveFreelancerArg(params: {
+  freelancer_username?: string;
+  freelancer_address?: string;
+}): Promise<{ ok: true; walletAddress: string; username: string | null } | { ok: false; error: string }> {
+  const raw = params.freelancer_username?.trim() || params.freelancer_address?.trim() || "";
+  if (!raw) {
+    return {
+      ok: false,
+      error: "Provide freelancer_username (e.g. samuel) or freelancer_address.",
+    };
+  }
+  return resolveFreelancerInput(raw);
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,7 +123,8 @@ export async function executeCreateDealDraft(
   store: JsonStore,
   chatId: string,
   params: {
-    freelancer_address: string;
+    freelancer_username?: string;
+    freelancer_address?: string;
     total_amount: number;
     currency?: string;
     milestones: Array<{ amount: number; description: string }>;
@@ -110,9 +132,8 @@ export async function executeCreateDealDraft(
 ): Promise<string> {
   const key = storeKey(chatId);
 
-  if (!looksLikeEthAddress(params.freelancer_address)) {
-    return "❌ Invalid freelancer address. Please provide a valid 0x address.";
-  }
+  const resolved = await resolveFreelancerArg(params);
+  if (!resolved.ok) return `❌ ${resolved.error}`;
   if (!params.total_amount || params.total_amount <= 0) {
     return "❌ Total amount must be positive.";
   }
@@ -131,7 +152,8 @@ export async function executeCreateDealDraft(
     updatedAt: Date.now(),
     payoutCurrency: (params.currency?.toUpperCase() === "EURC" ? "EURC" : "USDC") as "USDC" | "EURC",
     totalAmount: Math.round(params.total_amount * 100) / 100,
-    freelancerAddress: params.freelancer_address.trim(),
+    freelancerAddress: resolved.walletAddress,
+    freelancerUsername: resolved.username ?? undefined,
     milestones: params.milestones.map((m) => ({
       amount: Math.round(m.amount * 100) / 100,
       description: m.description,
@@ -146,7 +168,7 @@ export async function executeCreateDealDraft(
   const lines = [
     `📋 **Deal Draft Created!**`,
     ``,
-    `👷 Freelancer: \`${draft.freelancerAddress.slice(0, 10)}…${draft.freelancerAddress.slice(-8)}\``,
+    formatFreelancerLine(draft),
     `💵 Total (gross): ${formatDollars(draft.totalAmount)}`,
     `💳 Platform fee (2%): ${formatDollars(fee)}`,
     `💰 Net to freelancer: ${formatDollars(net)}`,
@@ -179,7 +201,7 @@ export async function executeShowDealSummary(
   const lines = [
     `📋 **Deal Draft Summary**`,
     ``,
-    `👷 Freelancer: \`${d.freelancerAddress || "(missing)"}\``,
+    formatFreelancerLine(d),
     `💵 Total: ${d.totalAmount ? formatDollars(d.totalAmount) : "(missing)"}`,
     `💳 Fee (2%): ${d.totalAmount ? formatDollars(fee) : "n/a"}`,
     `💰 Net: ${d.totalAmount ? formatDollars(net) : "n/a"}`,
@@ -222,8 +244,10 @@ export async function executeEditDeal(
       break;
     }
     case "address": {
-      if (!looksLikeEthAddress(params.value)) return "Invalid address format.";
-      draft.freelancerAddress = params.value.trim();
+      const resolved = await resolveFreelancerInput(params.value);
+      if (!resolved.ok) return `❌ ${resolved.error}`;
+      draft.freelancerAddress = resolved.walletAddress;
+      draft.freelancerUsername = resolved.username ?? undefined;
       break;
     }
     case "milestone": {
@@ -497,7 +521,7 @@ export async function executeSearchRegisteredAgents(): Promise<string> {
       lines.push("");
     });
     
-    lines.push("You can draft an escrow deal with one of these agents just like a human freelancer! Use their Owner Address as the freelancer address to hire them.");
+    lines.push("You can hire agents like human freelancers — use their username if they have an ArcLancer account, or their owner wallet address.");
     return lines.join("\n");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";

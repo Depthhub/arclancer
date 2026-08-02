@@ -23,11 +23,19 @@ const PHASE1_TOOLS: McpToolDefinition[] = [
   },
   {
     name: "create_deal_draft",
-    description: "Create a milestone escrow deal draft. Milestones must sum to 98% of total (2% platform fee).",
+    description:
+      "Create a milestone escrow deal draft. Use freelancer_username (e.g. samuel) when known; milestones must sum to 98% of total (2% platform fee).",
     inputSchema: {
       type: "object",
       properties: {
-        freelancer_address: { type: "string" },
+        freelancer_username: {
+          type: "string",
+          description: "ArcLancer username without @ (e.g. samuel). Preferred over wallet address.",
+        },
+        freelancer_address: {
+          type: "string",
+          description: "Fallback 0x wallet address if username is unknown.",
+        },
         total_amount: { type: "number" },
         currency: { type: "string", enum: ["USDC", "EURC"] },
         milestones: {
@@ -42,7 +50,7 @@ const PHASE1_TOOLS: McpToolDefinition[] = [
           },
         },
       },
-      required: ["freelancer_address", "total_amount", "milestones"],
+      required: ["total_amount", "milestones"],
     },
   },
   {
@@ -52,7 +60,7 @@ const PHASE1_TOOLS: McpToolDefinition[] = [
   },
   {
     name: "edit_deal",
-    description: "Edit a field on the current deal draft.",
+    description: "Edit a field on the current deal draft. For address, use a username (samuel) or 0x wallet.",
     inputSchema: {
       type: "object",
       properties: {
@@ -212,14 +220,38 @@ const PHASE2_TOOLS: McpToolDefinition[] = [
     },
   },
   {
-    name: "hire",
-    description: "Hire a freelancer/agent by creating an escrow from the current deal draft or job.",
+    name: "lookup_profile",
+    description: "Resolve an ArcLancer username (e.g. samuel) to wallet address before hiring.",
     inputSchema: {
       type: "object",
       properties: {
-        freelancer_address: { type: "string" },
+        username: { type: "string", description: "Username without @ (e.g. samuel)" },
+      },
+      required: ["username"],
+    },
+  },
+  {
+    name: "hire",
+    description:
+      "Hire a freelancer by username or wallet — creates an escrow draft from total_amount and milestones.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        freelancer_username: { type: "string", description: "ArcLancer username (e.g. samuel)" },
+        freelancer_address: { type: "string", description: "Fallback 0x wallet address" },
         total_amount: { type: "number" },
         job_id: { type: "string" },
+        milestones: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              amount: { type: "number" },
+              description: { type: "string" },
+            },
+            required: ["amount", "description"],
+          },
+        },
       },
     },
   },
