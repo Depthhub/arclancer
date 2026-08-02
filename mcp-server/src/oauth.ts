@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { JsonStore } from "../../shared/src/store/types.js";
 
 export const OAUTH_SCOPES = ["arclancer:read", "arclancer:write"] as const;
+const IGNORED_OAUTH_SCOPES = new Set(["offline_access", "openid"]);
 const CLIENT_TTL_SECONDS = 60 * 60 * 24 * 365;
 const REQUEST_TTL_SECONDS = 10 * 60;
 const ACCESS_TTL_SECONDS = 60 * 60;
@@ -119,12 +120,34 @@ function validateRedirectUri(value: string): string {
 }
 
 function normalizeScopes(value: string | null | undefined): string[] {
-  const requested = (value || OAUTH_SCOPES.join(" ")).split(/\s+/).filter(Boolean);
-  const unique = [...new Set(requested)];
+  const requested = (value || OAUTH_SCOPES.join(" "))
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((scope) => !IGNORED_OAUTH_SCOPES.has(scope));
+  const unique = [...new Set(requested.length > 0 ? requested : [...OAUTH_SCOPES])];
   if (unique.some((scope) => !OAUTH_SCOPES.includes(scope as (typeof OAUTH_SCOPES)[number]))) {
     throw new Error("Unsupported OAuth scope");
   }
   return unique;
+}
+
+function normalizeRedirectUris(value: unknown): string[] {
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? [value]
+      : [];
+  const uris = raw
+    .map((entry) => {
+      if (typeof entry === "string") return entry.trim();
+      if (entry && typeof entry === "object" && "uri" in entry) {
+        const uri = (entry as { uri?: unknown }).uri;
+        return typeof uri === "string" ? uri.trim() : "";
+      }
+      return String(entry).trim();
+    })
+    .filter(Boolean);
+  return uris.map(validateRedirectUri);
 }
 
 export function verifyPkce(codeVerifier: string, expectedChallenge: string): boolean {
@@ -164,9 +187,7 @@ async function issueTokens(
 
 async function registerClient(req: IncomingMessage, res: ServerResponse, store: JsonStore) {
   const body = JSON.parse(await readBody(req)) as Record<string, unknown>;
-  const redirectUris = Array.isArray(body.redirect_uris)
-    ? body.redirect_uris.map(String).map(validateRedirectUri)
-    : [];
+  const redirectUris = normalizeRedirectUris(body.redirect_uris);
   if (redirectUris.length === 0 || redirectUris.length > 10) {
     return json(res, 400, { error: "invalid_client_metadata" });
   }
@@ -317,6 +338,21 @@ export async function handleOAuthRequest(
     return true;
   }
 
+  if (req.method === "GET" && path === "/.well-known/oauth-authorization-server/mcp") {
+    json(res, 200, {
+      issuer: publicOrigin(),
+      authorization_endpoint: `${publicOrigin()}/oauth/authorize`,
+      token_endpoint: `${publicOrigin()}/oauth/token`,
+      registration_endpoint: `${publicOrigin()}/oauth/register`,
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
+      token_endpoint_auth_methods_supported: ["none"],
+      code_challenge_methods_supported: ["S256"],
+      scopes_supported: OAUTH_SCOPES,
+    });
+    return true;
+  }
+
   try {
     if (req.method === "POST" && path === "/oauth/register") {
       await registerClient(req, res, store);
@@ -331,9 +367,15 @@ export async function handleOAuthRequest(
       return true;
     }
   } catch (error) {
+    const description =
+      error instanceof TypeError && error.message === "Invalid URL"
+        ? "OAuth storage backend is misconfigured"
+        : error instanceof Error
+          ? error.message
+          : "Invalid OAuth request";
     json(res, 400, {
       error: "invalid_request",
-      error_description: error instanceof Error ? error.message : "Invalid OAuth request",
+      error_description: description,
     });
     return true;
   }

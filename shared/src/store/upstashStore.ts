@@ -1,5 +1,6 @@
 import type { JsonStore } from "./types.js";
 import { FileStore } from "./fileStore.js";
+import { normalizeRestUrl, sanitizeEnvValue } from "./env.js";
 
 class UpstashRestStore implements JsonStore {
   constructor(
@@ -12,9 +13,9 @@ class UpstashRestStore implements JsonStore {
     body?: string,
     query?: Record<string, string | number>
   ): Promise<unknown> {
-    const url = new URL(
-      `${this.restUrl.replace(/\/$/, "")}/${commandPath.replace(/^\//, "")}`
-    );
+    const base = this.restUrl.replace(/\/$/, "");
+    const path = commandPath.replace(/^\//, "");
+    const url = new URL(`${base}/${path}`);
     for (const [key, value] of Object.entries(query ?? {})) {
       url.searchParams.set(key, String(value));
     }
@@ -84,8 +85,8 @@ let singleton: JsonStore | null = null;
 export function getMcpStore(): JsonStore {
   if (singleton) return singleton;
 
-  const restUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const restToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  const restUrl = normalizeRestUrl(process.env.UPSTASH_REDIS_REST_URL ?? "");
+  const restToken = sanitizeEnvValue(process.env.UPSTASH_REDIS_REST_TOKEN);
   if (restUrl && restToken) {
     singleton = new UpstashRestStore(restUrl, restToken);
     return singleton;

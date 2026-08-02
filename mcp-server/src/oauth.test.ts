@@ -111,6 +111,18 @@ test("registers a client and rejects unregistered redirect URIs", async () => {
   );
   assert.equal(registration.response.statusCode, 201);
 
+  const claudeRegistration = await call(
+    store,
+    "POST",
+    "/oauth/register",
+    JSON.stringify({
+      client_name: "Claude",
+      redirect_uris: "https://claude.ai/api/mcp/auth_callback",
+      token_endpoint_auth_method: "none",
+    })
+  );
+  assert.equal(claudeRegistration.response.statusCode, 201);
+
   const verifier = "v".repeat(64);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const authorize = await call(
@@ -121,6 +133,32 @@ test("registers a client and rejects unregistered redirect URIs", async () => {
       `&response_type=code&code_challenge=${challenge}&code_challenge_method=S256`
   );
   assert.equal(authorize.response.statusCode, 400);
+});
+
+test("accepts offline_access in authorize scope requests", async () => {
+  const store = new MemoryStore();
+  const registration = await call(
+    store,
+    "POST",
+    "/oauth/register",
+    JSON.stringify({
+      client_name: "Claude",
+      redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+      token_endpoint_auth_method: "none",
+    })
+  );
+  const verifier = "v".repeat(64);
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const authorize = await call(
+    store,
+    "GET",
+    `/oauth/authorize?client_id=${registration.json.client_id}` +
+      `&redirect_uri=${encodeURIComponent("https://claude.ai/api/mcp/auth_callback")}` +
+      `&response_type=code&scope=${encodeURIComponent("arclancer:read offline_access")}` +
+      `&code_challenge=${challenge}&code_challenge_method=S256`
+  );
+  assert.equal(authorize.response.statusCode, 302);
+  assert.match(authorize.response.headers.Location, /\/connect\/authorize\?request_id=/);
 });
 
 test("enforces PKCE, one-time codes, and refresh-token rotation", async () => {
