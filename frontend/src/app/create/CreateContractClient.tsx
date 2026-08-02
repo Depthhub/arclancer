@@ -417,14 +417,14 @@ export default function CreateContractClient() {
                             <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
                         </div>
                         <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-                            {txStep === 'approving' && 'Approving USDC...'}
-                            {txStep === 'approved' && 'USDC Approved!'}
-                            {txStep === 'creating' && 'Creating Contract...'}
+                            {txStep === 'approving' && 'Confirming payment...'}
+                            {txStep === 'approved' && 'Payment confirmed'}
+                            {txStep === 'creating' && 'Creating contract...'}
                         </h2>
                         <p className="text-neutral-500 mb-6">
-                            {txStep === 'approving' && 'Please confirm the approval transaction in your wallet.'}
-                            {txStep === 'approved' && 'Now creating your escrow contract...'}
-                            {txStep === 'creating' && 'Please confirm the contract creation in your wallet.'}
+                            {txStep === 'approving' && 'Approve the payment step in the sign-in window.'}
+                            {txStep === 'approved' && 'Now creating your contract...'}
+                            {txStep === 'creating' && 'Approve the final step in the sign-in window.'}
                         </p>
                         {(isApproveConfirming || isCreateConfirming) && (
                             <p className="text-sm text-neutral-400">Waiting for confirmation...</p>

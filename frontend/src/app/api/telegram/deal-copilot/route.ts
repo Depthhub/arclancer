@@ -5,6 +5,7 @@ import {
   handleCallbackQuery,
   handleStatusCommand,
   handleMyContractsCommand,
+  acceptFreelancerIdentifier,
   initialState,
   getDealTtlSeconds,
 } from "@/lib/dealCopilot/engine";
@@ -345,7 +346,7 @@ async function handleCreateContract(
 
   // Validate draft
   if (!looksLikeEthAddress(draft.freelancerAddress)) {
-    await telegramSendMessage({ token, chatId, reply: { text: "⚠️ Invalid freelancer address. Use `/edit address 0x...` to fix.", parseMode: "Markdown" } });
+    await telegramSendMessage({ token, chatId, reply: { text: "⚠️ Missing freelancer. Use `/edit address samuel` to set one.", parseMode: "Markdown" } });
     return;
   }
   if (!draft.totalAmount || draft.totalAmount <= 0) {
@@ -1434,6 +1435,53 @@ export async function POST(req: Request) {
     const effectiveState = !state && (normalized === "start" || normalized === "startdeal")
       ? initialState(chatId)
       : state;
+
+    const resolvingFreelancer =
+      effectiveState?.stage === "collect_freelancer_address" ||
+      (effectiveState?.stage === "editing_field" && effectiveState.draft.editingField === "address");
+
+    if (resolvingFreelancer && trimmedText && !trimmedText.startsWith("/")) {
+      after(async () => {
+        try {
+          const { nextState, reply } = await acceptFreelancerIdentifier(effectiveState!, trimmedText);
+          await store.setJSON(key, nextState, getDealTtlSeconds());
+          await telegramSendMessage({ token, chatId, reply });
+        } catch (e) {
+          console.error("[dealCopilot] freelancer resolve failed", e);
+          const msg = e instanceof Error ? e.message : "Unknown error";
+          await telegramSendMessage({
+            token,
+            chatId,
+            reply: { text: `❌ Could not look up freelancer: ${msg.slice(0, 200)}`, parseMode: "Markdown" },
+          }).catch(() => {});
+        }
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (/^\/edit\s+address\s+\S+/i.test(trimmedText) && state) {
+      const usernameInput = trimmedText.replace(/^\/edit\s+address\s+/i, "").trim();
+      after(async () => {
+        try {
+          const editState: DealCopilotState = {
+            stage: "editing_field",
+            draft: { ...state.draft, editingField: "address", updatedAt: Date.now() },
+          };
+          const { nextState, reply } = await acceptFreelancerIdentifier(editState, usernameInput);
+          await store.setJSON(key, nextState, getDealTtlSeconds());
+          await telegramSendMessage({ token, chatId, reply });
+        } catch (e) {
+          console.error("[dealCopilot] /edit address failed", e);
+          const msg = e instanceof Error ? e.message : "Unknown error";
+          await telegramSendMessage({
+            token,
+            chatId,
+            reply: { text: `❌ Could not update freelancer: ${msg.slice(0, 200)}`, parseMode: "Markdown" },
+          }).catch(() => {});
+        }
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     const { nextState, reply, isAsync } = handleMessage(effectiveState, chatId, fromId, trimmedText);
 

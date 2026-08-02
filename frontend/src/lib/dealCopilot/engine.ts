@@ -1,5 +1,6 @@
 import { formatDollars } from "@/lib/utils";
 import { randomId, signToken } from "@/lib/dealCopilot/crypto";
+import { resolveFreelancerInput } from "@/lib/profile/resolveFreelancer";
 import {
   fetchContractDetails,
   fetchUserContracts,
@@ -108,13 +109,19 @@ const SENSITIVE_DATA_WARNING: BotReply = {
 /* Summary & Links                                                     */
 /* ------------------------------------------------------------------ */
 
+function formatFreelancerLine(d: DealDraft): string {
+  if (d.freelancerUsername) return `👷 **Freelancer**: @${d.freelancerUsername}`;
+  if (d.freelancerAddress) return `👷 **Freelancer**: \`${d.freelancerAddress}\``;
+  return `👷 **Freelancer**: (missing)`;
+}
+
 function summarizeDraft(d: DealDraft): string {
   const { fee, net } = computeFeeAndNet(d.totalAmount || 0);
   const milestonesSum = (d.milestones || []).reduce((s, m) => s + (m.amount || 0), 0);
   const lines = [
     `📋 **ArcLancer Deal Draft**`,
     ``,
-    `👷 **Freelancer address**: \`${d.freelancerAddress || "(missing)"}\``,
+    formatFreelancerLine(d),
     `💵 **Total (gross)**: ${d.totalAmount ? formatDollars(d.totalAmount) : "(missing)"}`,
     `💳 **Platform fee (2%)**: ${d.totalAmount ? formatDollars(fee) : "(n/a)"}`,
     `💰 **Net to freelancer**: ${d.totalAmount ? formatDollars(net) : "(n/a)"}`,
@@ -200,7 +207,7 @@ function helpText(): string {
     `**✏️ Editing:**`,
     `  /edit currency EURC`,
     `  /edit total 5000`,
-    `  /edit address 0x...`,
+    `  /edit address samuel`,
     `  /edit milestone 2 500 - New desc`,
     `  /add milestone 500 - Deliverable`,
     `  /remove milestone 3`,
@@ -222,7 +229,7 @@ function helpText(): string {
 }
 
 function isReadyForCreate(d: DealDraft): { ok: boolean; reason?: string } {
-  if (!looksLikeEthAddress(d.freelancerAddress || "")) return { ok: false, reason: "Missing or invalid freelancer address (expected 0x…40 hex chars)." };
+  if (!looksLikeEthAddress(d.freelancerAddress || "")) return { ok: false, reason: "Missing or invalid freelancer (use a username like samuel or a valid account code)." };
   if (!d.totalAmount || d.totalAmount <= 0) return { ok: false, reason: "Missing total amount." };
   if (!d.milestones || d.milestones.length === 0) return { ok: false, reason: "No milestones yet." };
   const { net } = computeFeeAndNet(d.totalAmount);
@@ -280,6 +287,35 @@ export async function handleStatusCommand(text: string): Promise<BotReply> {
   }
 }
 
+export async function acceptFreelancerIdentifier(
+  state: DealCopilotState,
+  text: string
+): Promise<{ nextState: DealCopilotState; reply: BotReply }> {
+  const resolved = await resolveFreelancerInput(text);
+  if (!resolved.ok) {
+    return {
+      nextState: state,
+      reply: { text: `❌ ${resolved.error}`, parseMode: "Markdown" },
+    };
+  }
+
+  const draft = { ...state.draft, updatedAt: Date.now() };
+  draft.freelancerAddress = resolved.walletAddress;
+  draft.freelancerUsername = resolved.username ?? undefined;
+
+  if (state.stage === "editing_field" && draft.editingField === "address") {
+    draft.editingField = undefined;
+    const next: DealCopilotState = { stage: "review", draft };
+    return { nextState: next, reply: summarizeWithButtons(draft) };
+  }
+
+  const next: DealCopilotState = { stage: "collect_milestones_count", draft };
+  return {
+    nextState: next,
+    reply: { text: "📌 How many milestones? (1–10)\nExample: `3`", parseMode: "Markdown" },
+  };
+}
+
 export async function handleMyContractsCommand(text: string): Promise<BotReply> {
   const parts = text.replace(/^\/mycontracts\s*/i, "").trim();
   if (!looksLikeEthAddress(parts)) {
@@ -332,13 +368,14 @@ function handleEditCommand(
     return { nextState: next, reply: summarizeWithButtons(draft) };
   }
 
-  // /edit address 0x...
-  if (/^address\s+/i.test(parts)) {
-    const val = parts.replace(/^address\s+/i, "").trim();
-    if (!looksLikeEthAddress(val)) return { nextState: state, reply: { text: "Invalid address. Example: `/edit address 0x1234...`", parseMode: "Markdown" } };
-    draft.freelancerAddress = val;
-    const next: DealCopilotState = { stage: "review", draft };
-    return { nextState: next, reply: summarizeWithButtons(draft) };
+  // /edit address (prompt) — /edit address samuel handled in route
+  if (/^address$/i.test(parts.trim())) {
+    draft.editingField = "address";
+    const next: DealCopilotState = { stage: "editing_field", draft };
+    return {
+      nextState: next,
+      reply: { text: "Send the new freelancer username (e.g. `samuel`):", parseMode: "Markdown" },
+    };
   }
 
   // /edit milestone 2 500 - New description
@@ -368,7 +405,7 @@ function handleEditCommand(
         "Edit what? Examples:",
         "  `/edit currency EURC`",
         "  `/edit total 5000`",
-        "  `/edit address 0x...`",
+        "  `/edit address samuel`",
         "  `/edit milestone 2 500 - New desc`",
       ].join("\n"),
       parseMode: "Markdown",
@@ -453,7 +490,7 @@ export function handleCallbackQuery(
     }
     case "edit_address": {
       const next: DealCopilotState = { stage: "editing_field", draft: { ...draft, editingField: "address" } };
-      return { nextState: next, reply: { text: "Send the new freelancer wallet address (0x...):", parseMode: "Markdown" } };
+      return { nextState: next, reply: { text: "Send the new freelancer username (e.g. `samuel`):", parseMode: "Markdown" } };
     }
     case "add_milestone": {
       const next: DealCopilotState = { stage: "editing_field", draft: { ...draft, editingField: "milestone" } };
@@ -629,11 +666,11 @@ export function handleMessage(
       return { nextState: next, reply: summarizeWithButtons(draft) };
     }
     if (field === "address") {
-      if (!looksLikeEthAddress(text)) return { nextState: state, reply: { text: "Invalid address. Send a valid 0x address.", parseMode: "Markdown" } };
-      draft.freelancerAddress = text.trim();
-      draft.editingField = undefined;
-      const next: DealCopilotState = { stage: "review", draft };
-      return { nextState: next, reply: summarizeWithButtons(draft) };
+      return {
+        nextState: state,
+        reply: { text: "⏳ Looking up that username...", parseMode: "Markdown" },
+        isAsync: true,
+      };
     }
     if (field === "milestone") {
       const mParts = text.split("-").map((p) => p.trim()).filter(Boolean);
@@ -798,7 +835,7 @@ export function handleMessage(
           `💳 Platform fee (2%): ${formatDollars(fee)}`,
           `💰 Net milestones must sum to: **${formatDollars(net)}**`,
           ``,
-          `Now send the **freelancer wallet address** (0x...).`,
+          `Now send the **freelancer username** (e.g. \`samuel\`). No @ needed.`,
         ].join("\n"),
         parseMode: "Markdown",
       },
@@ -806,14 +843,10 @@ export function handleMessage(
   }
 
   if (state.stage === "collect_freelancer_address") {
-    if (!looksLikeEthAddress(text)) {
-      return { nextState: state, reply: { text: "❌ That doesn't look like a valid 0x address. Try again.", parseMode: "Markdown" } };
-    }
-    draft.freelancerAddress = text.trim();
-    const next: DealCopilotState = { stage: "collect_milestones_count", draft };
     return {
-      nextState: next,
-      reply: { text: "📌 How many milestones? (1–10)\nExample: `3`", parseMode: "Markdown" },
+      nextState: state,
+      reply: { text: "⏳ Looking up that username...", parseMode: "Markdown" },
+      isAsync: true,
     };
   }
 
