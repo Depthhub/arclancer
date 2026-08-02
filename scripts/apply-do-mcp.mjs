@@ -126,6 +126,7 @@ const frontend = spec.services?.find((s) => s.name === 'frontend');
 if (frontend) {
   delete frontend.routes;
   upsertEnv(frontend.envs, 'NEXT_PUBLIC_MCP_URL', 'https://arclancer.xyz/mcp', 'RUN_AND_BUILD_TIME');
+  upsertEnv(frontend.envs, 'MCP_INTERNAL_URL', 'http://mcp-server:3100', 'RUN_TIME');
 }
 
 for (const service of spec.services || []) {
