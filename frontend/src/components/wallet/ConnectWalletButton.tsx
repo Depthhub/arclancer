@@ -5,7 +5,10 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ChevronDown, Wallet, LogOut, Droplets } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useCircleWallet } from '@/context/CircleWalletProvider';
-import { isCircleWalletsEnabled } from '@/lib/circle/featureFlag';
+import {
+  isCircleWalletsEnabled,
+  isCircleWalletsPreferred,
+} from '@/lib/circle/featureFlag';
 
 function truncateAddress(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -76,6 +79,20 @@ function CircleConnectButton({
   );
 }
 
+function CircleWalletPendingButton() {
+  return (
+    <button
+      type="button"
+      disabled
+      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium bg-neutral-200 text-neutral-500 cursor-not-allowed"
+      title="Circle wallet credentials are not configured on this deployment yet"
+    >
+      <Wallet className="w-4 h-4" />
+      Wallet setup pending
+    </button>
+  );
+}
+
 export function ConnectWalletButton({
   showBalance = false,
   chainStatus,
@@ -87,6 +104,10 @@ export function ConnectWalletButton({
 }) {
   if (isCircleWalletsEnabled()) {
     return <CircleConnectButton showBalance={showBalance} />;
+  }
+
+  if (isCircleWalletsPreferred()) {
+    return <CircleWalletPendingButton />;
   }
 
   return (
