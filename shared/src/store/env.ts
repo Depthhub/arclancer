@@ -9,6 +9,9 @@ export function sanitizeEnvValue(value: string | undefined): string {
 export function normalizeRestUrl(value: string): string {
   const sanitized = sanitizeEnvValue(value);
   if (!sanitized) return "";
+  if (sanitized.startsWith("EV[")) {
+    throw new Error("UPSTASH_REDIS_REST_URL is an unresolved DigitalOcean secret reference");
+  }
   if (/^https?:\/\//i.test(sanitized)) return sanitized.replace(/\/$/, "");
   return `https://${sanitized.replace(/^\/*/, "")}`.replace(/\/$/, "");
 }
