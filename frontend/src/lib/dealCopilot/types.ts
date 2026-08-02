@@ -40,6 +40,7 @@ export interface DealDraft {
   totalAmount: number; // dollars (gross)
 
   freelancerAddress: string;
+  freelancerUsername?: string;
 
   milestones: DealMilestoneDraft[];
 
