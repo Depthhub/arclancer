@@ -21,23 +21,32 @@ import { isCircleWalletsEnabled } from '@/lib/circle/featureFlag';
 const SESSION_KEY = 'arclancer.circle.session';
 const APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID?.trim() ?? '';
 
+type ConnectPhase = 'email' | 'verify' | 'username';
+
 type CircleWalletContextValue = {
   enabled: boolean;
   sdkReady: boolean;
+  deviceReady: boolean;
   isConnected: boolean;
   isConnecting: boolean;
   address?: `0x${string}`;
+  username?: string;
   walletId?: string;
   usdcBalance?: string;
   status: string;
+  statusIsError: boolean;
   email: string;
   setEmail: (email: string) => void;
+  usernameDraft: string;
+  setUsernameDraft: (value: string) => void;
+  connectPhase: ConnectPhase;
   otpSent: boolean;
   openConnect: () => void;
   closeConnect: () => void;
   connectOpen: boolean;
   sendEmailOtp: () => Promise<void>;
   verifyEmailOtp: () => Promise<void>;
+  saveUsername: () => Promise<void>;
   disconnect: () => void;
   refreshWallets: () => Promise<void>;
   executeChallenge: (challengeId: string) => Promise<void>;
@@ -108,13 +117,60 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
   const [usdcBalance, setUsdcBalance] = useState<string | undefined>();
 
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState<string | undefined>();
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [connectPhase, setConnectPhase] = useState<ConnectPhase>('email');
   const [otpSent, setOtpSent] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [status, setStatus] = useState('');
+  const [statusIsError, setStatusIsError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  const deviceReady = sdkReady && Boolean(deviceId);
   const address = wallet?.address as `0x${string}` | undefined;
   const isConnected = Boolean(session && wallet?.address);
+
+  const applyLoginConfigs = useCallback(
+    (login: {
+      deviceToken: string;
+      deviceEncryptionKey: string;
+      otpToken: string;
+      email: string;
+    }) => {
+      const sdk = sdkRef.current;
+      if (!sdk) return;
+      sdk.updateConfigs({
+        appSettings: { appId: APP_ID },
+        loginConfigs: {
+          deviceToken: login.deviceToken,
+          deviceEncryptionKey: login.deviceEncryptionKey,
+          otpToken: login.otpToken,
+          email: { email: login.email },
+        } as import('@circle-fin/w3s-pw-web-sdk/dist/src/types').LoginConfigs,
+      });
+    },
+    []
+  );
+
+  const refreshProfileFromSession = useCallback(async (login: CircleLoginSession) => {
+    const res = await fetch(
+      `/api/profile?userToken=${encodeURIComponent(login.userToken)}`
+    );
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data?.profile?.username) {
+      setUsername(data.profile.username as string);
+      setConnectPhase('email');
+      setConnectOpen(false);
+      setOtpSent(false);
+      setStatus('');
+      setStatusIsError(false);
+      return;
+    }
+    setConnectPhase('username');
+    setConnectOpen(true);
+    setStatus('Choose a username so clients can tag you (e.g. samuel)');
+    setStatusIsError(false);
+  }, []);
 
   useEffect(() => {
     if (!enabled || !APP_ID) return;
@@ -128,7 +184,8 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
           if (cancelled) return;
           if (error || !result?.userToken || !result?.encryptionKey) {
             const err = error as { message?: string } | undefined;
-            setStatus(err?.message ?? 'Email verification failed');
+            setStatus(err?.message ?? 'That code did not work. Try again.');
+            setStatusIsError(true);
             setIsConnecting(false);
             return;
           }
@@ -140,19 +197,20 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
           setSession(login);
           saveSession(login);
           setIsConnecting(true);
-          setStatus('Creating your Arc wallet…');
+          setStatus('Setting up your account…');
+          setStatusIsError(false);
 
           ensureWalletRef.current(login)
-            .then(() => {
+            .then(async () => {
               if (!cancelled) {
-                setConnectOpen(false);
-                setOtpSent(false);
+                await refreshProfileFromSession(login);
                 setIsConnecting(false);
               }
             })
             .catch((err) => {
               if (!cancelled) {
-                setStatus(err instanceof Error ? err.message : 'Wallet setup failed');
+                setStatus(err instanceof Error ? err.message : 'Sign-in failed');
+                setStatusIsError(true);
                 setIsConnecting(false);
               }
             });
@@ -163,14 +221,17 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
         if (!cancelled) setSdkReady(true);
       } catch (err) {
         console.error('Circle SDK init failed:', err);
-        if (!cancelled) setStatus('Failed to load Circle wallet SDK');
+        if (!cancelled) {
+          setStatus('Sign-in is temporarily unavailable. Refresh and try again.');
+          setStatusIsError(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, refreshProfileFromSession]);
 
   useEffect(() => {
     if (!sdkReady || !sdkRef.current) return;
@@ -258,20 +319,20 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       try {
         const init = await circleApi('initializeUser', { userToken: login.userToken });
         if (init.challengeId) {
-          setStatus('Creating your Arc wallet…');
+          setStatus('Almost done…');
           await executeChallenge(init.challengeId);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
-        // User already initialized — load existing wallet
         if (!msg.includes('155106') && !msg.toLowerCase().includes('initialized')) {
           throw err;
         }
       }
 
       const arcWallet = await loadWallets(login.userToken);
-      if (!arcWallet) throw new Error('No Arc Testnet wallet found');
-      setStatus('Connected to Arc Testnet');
+      if (!arcWallet) throw new Error('Could not finish account setup');
+      setStatus('Signed in');
+      setStatusIsError(false);
       return arcWallet;
     },
     [authenticateSdk, executeChallenge, loadWallets]
@@ -303,65 +364,120 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
     };
   }, [session, wallet, authenticateSdk, loadWallets]);
 
+  useEffect(() => {
+    if (!session?.userToken || !wallet?.address || username) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshProfileFromSession(session);
+      } catch {
+        /* ignore */
+      }
+      if (cancelled) return;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, wallet?.address, username, refreshProfileFromSession]);
+
   const sendEmailOtp = useCallback(async () => {
-    if (!deviceId || !email.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       setStatus('Enter your email address');
+      setStatusIsError(true);
+      return;
+    }
+    if (!deviceId) {
+      setStatus('Still preparing sign-in. Wait a moment and try again.');
+      setStatusIsError(true);
       return;
     }
     setIsConnecting(true);
-    setStatus('Sending verification code…');
+    setStatus('Sending your code…');
+    setStatusIsError(false);
     try {
-      const data = await circleApi('requestEmailOtp', { deviceId, email: email.trim() });
+      const data = await circleApi('requestEmailOtp', { deviceId, email: trimmedEmail });
       setDeviceToken(data.deviceToken);
       setDeviceEncryptionKey(data.deviceEncryptionKey);
       setOtpToken(data.otpToken);
 
-      const sdk = sdkRef.current;
-      if (sdk) {
-        sdk.updateConfigs({
-          appSettings: { appId: APP_ID },
-          loginConfigs: {
-            deviceToken: data.deviceToken,
-            deviceEncryptionKey: data.deviceEncryptionKey,
-            otpToken: data.otpToken,
-          },
-        });
-      }
+      applyLoginConfigs({
+        deviceToken: data.deviceToken,
+        deviceEncryptionKey: data.deviceEncryptionKey,
+        otpToken: data.otpToken,
+        email: trimmedEmail,
+      });
 
       setOtpSent(true);
-      setStatus('Check your email for the verification code');
+      setConnectPhase('verify');
+      setStatus('Check your email for the code');
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Failed to send code');
+      setStatus(err instanceof Error ? err.message : 'Could not send code');
+      setStatusIsError(true);
     } finally {
       setIsConnecting(false);
     }
-  }, [deviceId, email]);
+  }, [deviceId, email, applyLoginConfigs]);
 
   const verifyEmailOtp = useCallback(async () => {
     const sdk = sdkRef.current;
-    if (!sdk || !deviceToken || !deviceEncryptionKey || !otpToken) {
+    const trimmedEmail = email.trim();
+    if (!sdk || !deviceToken || !deviceEncryptionKey || !otpToken || !trimmedEmail) {
       setStatus('Send a verification code first');
+      setStatusIsError(true);
       return;
     }
 
     setIsConnecting(true);
-    setStatus('Opening verification…');
+    setStatus('Enter the code in the window…');
+    setStatusIsError(false);
 
-    sdk.updateConfigs({
-      appSettings: { appId: APP_ID },
-      loginConfigs: {
-        deviceToken,
-        deviceEncryptionKey,
-        otpToken,
-      },
+    applyLoginConfigs({
+      deviceToken,
+      deviceEncryptionKey,
+      otpToken,
+      email: trimmedEmail,
     });
 
     sdk.verifyOtp();
-  }, [deviceToken, deviceEncryptionKey, otpToken]);
+  }, [deviceToken, deviceEncryptionKey, otpToken, email, applyLoginConfigs]);
+
+  const saveUsername = useCallback(async () => {
+    if (!session?.userToken) {
+      setStatus('Sign in first');
+      setStatusIsError(true);
+      return;
+    }
+    setIsConnecting(true);
+    setStatusIsError(false);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: usernameDraft,
+          userToken: session.userToken,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Could not save username');
+      }
+      setUsername(data.profile.username as string);
+      setConnectPhase('email');
+      setConnectOpen(false);
+      setStatus('');
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Could not save username');
+      setStatusIsError(true);
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [session, usernameDraft]);
 
   const executeContract = useCallback(
     async (params: Omit<CircleContractExecutionParams, 'walletId'>) => {
-      if (!session || !wallet?.id) throw new Error('Connect your Circle wallet first');
+      if (!session || !wallet?.id) throw new Error('Sign in first');
       authenticateSdk(session);
       const data = await circleApi('createContractExecution', {
         userToken: session.userToken,
@@ -376,7 +492,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
   );
 
   const createConnectorToken = useCallback(async () => {
-    if (!session) throw new Error('Connect your Circle wallet first');
+    if (!session) throw new Error('Sign in first');
     const response = await fetch('/api/mcp/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -390,14 +506,14 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
   }, [session]);
 
   const fundWallet = useCallback(async () => {
-    if (!address) throw new Error('Connect your Circle wallet first');
-    setStatus('Requesting USDC funding…');
+    if (!address) throw new Error('Sign in first');
+    setStatus('Adding test funds…');
     const result = await circleApi('fundWallet', { address });
     if (result.checkoutUrl) {
       window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer');
       setStatus('Complete funding in the Circle checkout');
     } else {
-      setStatus('Test USDC requested. It may take a moment to arrive.');
+      setStatus('Test funds requested. They may take a moment to arrive.');
       window.setTimeout(() => void refreshWallets(), 4000);
     }
     return result as { mode?: string; checkoutUrl?: string };
@@ -405,7 +521,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
 
   const resolveOAuthRequest = useCallback(
     async (requestId: string, approved: boolean) => {
-      if (approved && !session) throw new Error('Connect your Circle wallet first');
+      if (approved && !session) throw new Error('Sign in first');
       const response = await fetch('/api/mcp/oauth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -427,6 +543,9 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
   const disconnect = useCallback(() => {
     setSession(null);
     setWallet(null);
+    setUsername(undefined);
+    setUsernameDraft('');
+    setConnectPhase('email');
     setUsdcBalance(undefined);
     setOtpSent(false);
     setDeviceToken('');
@@ -434,26 +553,40 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
     setOtpToken('');
     saveSession(null);
     setStatus('');
+    setStatusIsError(false);
   }, []);
 
   const value = useMemo<CircleWalletContextValue>(
     () => ({
       enabled,
       sdkReady,
+      deviceReady,
       isConnected,
       isConnecting,
       address,
+      username,
       walletId: wallet?.id,
       usdcBalance,
       status,
+      statusIsError,
       email,
       setEmail,
+      usernameDraft,
+      setUsernameDraft,
+      connectPhase,
       otpSent,
-      openConnect: () => setConnectOpen(true),
+      openConnect: () => {
+        setConnectPhase('email');
+        setOtpSent(false);
+        setStatus('');
+        setStatusIsError(false);
+        setConnectOpen(true);
+      },
       closeConnect: () => setConnectOpen(false),
       connectOpen,
       sendEmailOtp,
       verifyEmailOtp,
+      saveUsername,
       disconnect,
       refreshWallets,
       executeChallenge,
@@ -465,17 +598,23 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
     [
       enabled,
       sdkReady,
+      deviceReady,
       isConnected,
       isConnecting,
       address,
+      username,
       wallet?.id,
       usdcBalance,
       status,
+      statusIsError,
       email,
+      usernameDraft,
+      connectPhase,
       otpSent,
       connectOpen,
       sendEmailOtp,
       verifyEmailOtp,
+      saveUsername,
       disconnect,
       refreshWallets,
       executeChallenge,
@@ -501,17 +640,23 @@ export function useCircleWallet() {
     return {
       enabled: false,
       sdkReady: false,
+      deviceReady: false,
       isConnected: false,
       isConnecting: false,
       status: '',
+      statusIsError: false,
       email: '',
       setEmail: () => {},
+      usernameDraft: '',
+      setUsernameDraft: () => {},
+      connectPhase: 'email' as ConnectPhase,
       otpSent: false,
       openConnect: () => {},
       closeConnect: () => {},
       connectOpen: false,
       sendEmailOtp: async () => {},
       verifyEmailOtp: async () => {},
+      saveUsername: async () => {},
       disconnect: () => {},
       refreshWallets: async () => {},
       executeChallenge: async () => {},

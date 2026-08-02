@@ -14,6 +14,7 @@ export function useWallet() {
     return {
       mode: 'circle' as const,
       address: circle.address,
+      username: circle.username,
       isConnected: circle.isConnected,
       isConnecting: circle.isConnecting,
       chainId: arcTestnet.id,

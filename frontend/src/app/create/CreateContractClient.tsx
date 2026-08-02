@@ -14,6 +14,7 @@ import { StableFXRate } from '@/components/contracts/StableFXRate';
 import { useCalculateFee } from '@/hooks/useContracts';
 import { CONTRACTS, FACTORY_ABI, ERC20_ABI } from '@/lib/contracts';
 import { formatDollars, parseUSDC } from '@/lib/utils';
+import { isEthAddress } from '@/lib/profile/username';
 import { getCurrencyAddress } from '@/hooks/useStableFX';
 import { useTransactionToast } from '@/hooks/useTransactionToast';
 import {
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 
 interface FormData {
+    freelancerUsername: string;
     freelancerAddress: string;
     totalAmount: string;
     payoutCurrency: string;
@@ -46,6 +48,7 @@ export default function CreateContractClient() {
 
     const { register, handleSubmit, watch, control, setValue, formState: { errors } } = useForm<FormData>({
         defaultValues: {
+            freelancerUsername: '',
             freelancerAddress: '',
             totalAmount: '',
             payoutCurrency: 'USDC',
@@ -81,7 +84,13 @@ export default function CreateContractClient() {
                 if (!obj.ok || !obj.draft) return;
 
                 const d = obj.draft;
-                if (typeof d.freelancerAddress === 'string') setValue('freelancerAddress', d.freelancerAddress);
+                if (typeof d.freelancerAddress === 'string') {
+                    if (isEthAddress(d.freelancerAddress)) {
+                        setValue('freelancerAddress', d.freelancerAddress);
+                    } else {
+                        setValue('freelancerUsername', d.freelancerAddress.replace(/^@+/, ''));
+                    }
+                }
                 if (typeof d.totalAmount === 'string') setValue('totalAmount', d.totalAmount);
                 if (typeof d.payoutCurrency === 'string') setValue('payoutCurrency', d.payoutCurrency);
 
@@ -113,7 +122,11 @@ export default function CreateContractClient() {
         const freelancer = searchParams.get('freelancer');
         if (!freelancer) return;
 
-        setValue('freelancerAddress', freelancer);
+        if (isEthAddress(freelancer)) {
+            setValue('freelancerAddress', freelancer);
+        } else {
+            setValue('freelancerUsername', freelancer.replace(/^@+/, ''));
+        }
         const total = searchParams.get('totalAmount');
         if (total) setValue('totalAmount', total);
 
@@ -243,10 +256,40 @@ export default function CreateContractClient() {
         }
     }, [isCreateSuccess]);
 
+    const resolveFreelancerAddress = async (tag: string): Promise<string> => {
+        const q = tag.trim();
+        if (isEthAddress(q)) return q;
+        const res = await fetch(`/api/profile/lookup?q=${encodeURIComponent(q)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(
+                typeof data.error === 'string' ? data.error : 'Could not find that username'
+            );
+        }
+        return data.walletAddress as string;
+    };
+
     const onSubmit = async (data: FormData) => {
         if (!address) return;
 
         setErrorMessage('');
+        let freelancerAddress = data.freelancerAddress.trim();
+        if (!freelancerAddress && data.freelancerUsername.trim()) {
+            try {
+                freelancerAddress = await resolveFreelancerAddress(data.freelancerUsername);
+                setValue('freelancerAddress', freelancerAddress);
+            } catch (err) {
+                setTxStep('error');
+                setErrorMessage(err instanceof Error ? err.message : 'Invalid freelancer');
+                return;
+            }
+        }
+        if (!isEthAddress(freelancerAddress)) {
+            setTxStep('error');
+            setErrorMessage('Enter a valid username (e.g. samuel) or ask them to sign up first');
+            return;
+        }
+
         const feeAmount = parseUSDC(fee);
 
         // Get payout currency address
@@ -275,7 +318,7 @@ export default function CreateContractClient() {
                     abiFunctionSignature:
                         'createEscrowContract(address,uint256,address,(uint256,string)[])',
                     abiParameters: [
-                        data.freelancerAddress,
+                        freelancerAddress,
                         parseUSDC(data.totalAmount).toString(),
                         payoutCurrencyAddress,
                         milestones.map((m) => [m.amount.toString(), m.description]),
@@ -307,7 +350,7 @@ export default function CreateContractClient() {
                 abi: FACTORY_ABI,
                 functionName: 'createEscrowContract',
                 args: [
-                    data.freelancerAddress as `0x${string}`,
+                    freelancerAddress as `0x${string}`,
                     parseUSDC(data.totalAmount),
                     payoutCurrencyAddress,
                     milestones,
@@ -353,9 +396,9 @@ export default function CreateContractClient() {
                         <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-6">
                             <Wallet className="w-10 h-10 text-blue-600" />
                         </div>
-                        <h2 className="text-2xl font-bold text-neutral-900 mb-3">Connect Your Wallet</h2>
+                        <h2 className="text-2xl font-bold text-neutral-900 mb-3">Sign in to continue</h2>
                         <p className="text-neutral-500 mb-6">
-                            Connect your wallet to create a new escrow contract.
+                            Sign in with your email to create a new contract.
                         </p>
                         <ConnectWalletButton />
                     </div>
@@ -490,20 +533,19 @@ export default function CreateContractClient() {
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <Input
-                                    label="Freelancer Address"
-                                    placeholder="0x..."
-                                    {...register('freelancerAddress', {
-                                        required: 'Freelancer address is required',
-                                        pattern: {
-                                            value: /^0x[a-fA-F0-9]{40}$/,
-                                            message: 'Invalid Ethereum address',
-                                        },
+                                    label="Freelancer username"
+                                    placeholder="samuel"
+                                    {...register('freelancerUsername', {
+                                        required: 'Freelancer username is required',
                                     })}
-                                    error={errors.freelancerAddress?.message}
+                                    error={errors.freelancerUsername?.message}
                                 />
+                                <p className="text-xs text-neutral-400">
+                                    They must have an ArcLancer account (e.g. @samuel). No @ needed.
+                                </p>
 
                                 <Input
-                                    label="Total Amount (USDC)"
+                                    label="Total amount (USD)"
                                     type="number"
                                     placeholder="5000"
                                     leftAddon="$"
@@ -661,7 +703,13 @@ export default function CreateContractClient() {
                                         <div className="space-y-2">
                                             <div className="flex justify-between">
                                                 <span className="text-neutral-500">Freelancer</span>
-                                                <span className="text-neutral-900 font-mono text-sm">{watch('freelancerAddress').slice(0, 10)}...{watch('freelancerAddress').slice(-8)}</span>
+                                                <span className="text-neutral-900 text-sm font-medium">
+                                                    {watch('freelancerUsername')
+                                                        ? `@${watch('freelancerUsername').replace(/^@+/, '')}`
+                                                        : watch('freelancerAddress')
+                                                          ? `${watch('freelancerAddress').slice(0, 10)}…`
+                                                          : '—'}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-neutral-500">Total Amount</span>
