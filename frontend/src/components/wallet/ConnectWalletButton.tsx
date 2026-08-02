@@ -81,19 +81,6 @@ function CircleConnectButton({
   );
 }
 
-function CircleWalletPendingButton() {
-  return (
-    <button
-      type="button"
-      disabled
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium bg-neutral-200 text-neutral-500 cursor-not-allowed"
-      title="Sign-in is being configured on this deployment"
-    >
-      Sign-in setup pending
-    </button>
-  );
-}
-
 export function ConnectWalletButton({
   showBalance = false,
   chainStatus,
@@ -103,12 +90,8 @@ export function ConnectWalletButton({
   chainStatus?: 'full' | 'icon' | 'none';
   accountStatus?: { smallScreen: 'full' | 'avatar' | 'address'; largeScreen: 'full' | 'avatar' | 'address' };
 }) {
-  if (isCircleWalletsEnabled()) {
+  if (isCircleWalletsEnabled() || isCircleWalletsPreferred()) {
     return <CircleConnectButton showBalance={showBalance} />;
-  }
-
-  if (isCircleWalletsPreferred()) {
-    return <CircleWalletPendingButton />;
   }
 
   return (

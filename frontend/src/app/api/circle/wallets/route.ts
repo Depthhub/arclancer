@@ -57,6 +57,26 @@ export async function POST(request: Request) {
         });
       }
 
+      case 'resendEmailOtp': {
+        const { deviceId, email, otpToken } = params;
+        if (!deviceId || !email || !otpToken) {
+          return NextResponse.json(
+            { error: 'Missing deviceId, email, or otpToken' },
+            { status: 400 }
+          );
+        }
+        return circleFetch('/v1/w3s/users/email/resendOTP', {
+          method: 'POST',
+          headers: circleHeaders(),
+          body: JSON.stringify({
+            idempotencyKey: crypto.randomUUID(),
+            deviceId,
+            email,
+            otpToken,
+          }),
+        });
+      }
+
       case 'initializeUser': {
         const { userToken } = params;
         if (!userToken) {

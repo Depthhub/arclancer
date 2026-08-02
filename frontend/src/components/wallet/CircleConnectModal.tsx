@@ -15,6 +15,7 @@ export function CircleConnectModal() {
     setUsernameDraft,
     connectPhase,
     sendEmailOtp,
+    resendEmailOtp,
     verifyEmailOtp,
     saveUsername,
     isConnecting,
@@ -117,14 +118,28 @@ export function CircleConnectModal() {
                   {preparing ? 'Preparing…' : 'Send verification code'}
                 </Button>
               ) : (
-                <Button
-                  className="w-full"
-                  onClick={() => void verifyEmailOtp()}
-                  disabled={preparing || isConnecting}
-                  leftIcon={isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
-                >
-                  Enter code from email
-                </Button>
+                <>
+                  <p className="text-xs text-neutral-500 leading-relaxed rounded-lg bg-neutral-50 px-3 py-2">
+                    After you click below, a <strong>secure Circle window</strong> opens. Paste your
+                    6-digit code there — not in this box. Check spam if the email is missing.
+                  </p>
+                  <Button
+                    className="w-full"
+                    onClick={() => void verifyEmailOtp()}
+                    disabled={preparing || isConnecting}
+                    leftIcon={isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
+                  >
+                    {isConnecting ? 'Waiting for code…' : 'Open sign-in window'}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => void resendEmailOtp()}
+                    disabled={isConnecting}
+                    className="w-full text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                </>
               )}
             </div>
           </>

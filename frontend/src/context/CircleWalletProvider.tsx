@@ -45,6 +45,7 @@ type CircleWalletContextValue = {
   closeConnect: () => void;
   connectOpen: boolean;
   sendEmailOtp: () => Promise<void>;
+  resendEmailOtp: () => Promise<void>;
   verifyEmailOtp: () => Promise<void>;
   saveUsername: () => Promise<void>;
   disconnect: () => void;
@@ -184,7 +185,9 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
           if (cancelled) return;
           if (error || !result?.userToken || !result?.encryptionKey) {
             const err = error as { message?: string } | undefined;
-            setStatus(err?.message ?? 'That code did not work. Try again.');
+            setConnectOpen(true);
+            setConnectPhase('verify');
+            setStatus(err?.message ?? 'That code did not work. Request a new code and try again.');
             setStatusIsError(true);
             setIsConnecting(false);
             return;
@@ -410,7 +413,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
 
       setOtpSent(true);
       setConnectPhase('verify');
-      setStatus('Check your email for the code');
+      setStatus('Check your email for the 6-digit code');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Could not send code');
       setStatusIsError(true);
@@ -418,6 +421,66 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       setIsConnecting(false);
     }
   }, [deviceId, email, applyLoginConfigs]);
+
+  const resendEmailOtp = useCallback(async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !deviceId) {
+      setStatus('Enter your email and send a code first');
+      setStatusIsError(true);
+      return;
+    }
+    setIsConnecting(true);
+    setStatus('Sending a new code…');
+    setStatusIsError(false);
+    try {
+      let data: { deviceToken?: string; deviceEncryptionKey?: string; otpToken?: string };
+      if (otpToken) {
+        data = await circleApi('resendEmailOtp', {
+          deviceId,
+          email: trimmedEmail,
+          otpToken,
+        });
+        setOtpToken(data.otpToken ?? otpToken);
+      } else {
+        data = await circleApi('requestEmailOtp', { deviceId, email: trimmedEmail });
+        if (data.deviceToken) setDeviceToken(data.deviceToken);
+        if (data.deviceEncryptionKey) setDeviceEncryptionKey(data.deviceEncryptionKey);
+        if (data.otpToken) setOtpToken(data.otpToken);
+      }
+
+      if (data.deviceToken && data.deviceEncryptionKey && data.otpToken) {
+        applyLoginConfigs({
+          deviceToken: data.deviceToken,
+          deviceEncryptionKey: data.deviceEncryptionKey,
+          otpToken: data.otpToken,
+          email: trimmedEmail,
+        });
+      } else if (data.otpToken && deviceToken && deviceEncryptionKey) {
+        applyLoginConfigs({
+          deviceToken,
+          deviceEncryptionKey,
+          otpToken: data.otpToken,
+          email: trimmedEmail,
+        });
+      }
+
+      setOtpSent(true);
+      setConnectPhase('verify');
+      setStatus('New code sent — check your email');
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Could not resend code');
+      setStatusIsError(true);
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [
+    deviceId,
+    email,
+    otpToken,
+    deviceToken,
+    deviceEncryptionKey,
+    applyLoginConfigs,
+  ]);
 
   const verifyEmailOtp = useCallback(async () => {
     const sdk = sdkRef.current;
@@ -428,9 +491,10 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    setIsConnecting(true);
-    setStatus('Enter the code in the window…');
     setStatusIsError(false);
+    setStatus(
+      'A secure sign-in window will open — paste your 6-digit code there. If you do not see it, check behind this tab or allow pop-ups.'
+    );
 
     applyLoginConfigs({
       deviceToken,
@@ -439,7 +503,18 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       email: trimmedEmail,
     });
 
-    sdk.verifyOtp();
+    // Circle hosts OTP entry in its own window/iframe — hide our modal so it is not covered.
+    setConnectOpen(false);
+    setIsConnecting(true);
+
+    try {
+      sdk.verifyOtp();
+    } catch (err) {
+      setConnectOpen(true);
+      setIsConnecting(false);
+      setStatus(err instanceof Error ? err.message : 'Could not open sign-in window');
+      setStatusIsError(true);
+    }
   }, [deviceToken, deviceEncryptionKey, otpToken, email, applyLoginConfigs]);
 
   const saveUsername = useCallback(async () => {
@@ -585,6 +660,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       closeConnect: () => setConnectOpen(false),
       connectOpen,
       sendEmailOtp,
+      resendEmailOtp,
       verifyEmailOtp,
       saveUsername,
       disconnect,
@@ -613,6 +689,7 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       otpSent,
       connectOpen,
       sendEmailOtp,
+      resendEmailOtp,
       verifyEmailOtp,
       saveUsername,
       disconnect,
@@ -627,10 +704,42 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
 
   if (!enabled) return <>{children}</>;
 
+  const showVerifyBanner =
+    isConnecting && !connectOpen && connectPhase === 'verify';
+
   return (
-    <CircleWalletContext.Provider value={value}>
-      {children}
-    </CircleWalletContext.Provider>
+    <>
+      {showVerifyBanner && (
+        <div
+          className="fixed bottom-4 left-4 right-4 z-[200] mx-auto max-w-md rounded-2xl border border-blue-100 bg-white p-4 shadow-lg"
+          role="status"
+        >
+          <p className="text-sm font-medium text-neutral-900">Paste your code in the Circle window</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Look for a pop-up or new panel from Circle. Allow pop-ups if nothing appears.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void verifyEmailOtp()}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Open window again
+            </button>
+            <button
+              type="button"
+              onClick={() => setConnectOpen(true)}
+              className="text-xs font-semibold text-neutral-600 hover:text-neutral-900"
+            >
+              Back to sign-in
+            </button>
+          </div>
+        </div>
+      )}
+      <CircleWalletContext.Provider value={value}>
+        {children}
+      </CircleWalletContext.Provider>
+    </>
   );
 }
 
@@ -655,6 +764,7 @@ export function useCircleWallet() {
       closeConnect: () => {},
       connectOpen: false,
       sendEmailOtp: async () => {},
+      resendEmailOtp: async () => {},
       verifyEmailOtp: async () => {},
       saveUsername: async () => {},
       disconnect: () => {},

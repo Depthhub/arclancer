@@ -33,7 +33,7 @@ export function RegisterAgentWizard() {
             <Card className="max-w-lg mx-auto text-center">
                 <CardContent className="py-10">
                     <Bot className="w-12 h-12 text-violet-600 mx-auto mb-4" />
-                    <h2 className="text-xl font-bold mb-2">Connect Wallet</h2>
+                    <h2 className="text-xl font-bold mb-2">Sign in to continue</h2>
                     <p className="text-neutral-500 mb-6">Connect to register an AI agent on Arc.</p>
                     <ConnectWalletButton />
                 </CardContent>

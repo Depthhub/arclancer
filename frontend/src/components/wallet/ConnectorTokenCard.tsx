@@ -31,7 +31,7 @@ export function ConnectorTokenCard() {
         <p className="mt-1 text-sm text-neutral-500">
           Your connector token links ChatGPT or Claude to the same Circle wallet you use on ArcLancer.
         </p>
-        <Button className="mt-4" onClick={circle.openConnect}>Connect wallet</Button>
+        <Button className="mt-4" onClick={circle.openConnect}>Sign in</Button>
       </div>
     );
   }
