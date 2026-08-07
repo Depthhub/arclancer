@@ -51,10 +51,13 @@ function formatFreelancerLine(d: DealDraft): string {
   return `👷 Freelancer: (missing)`;
 }
 
-async function resolveFreelancerArg(params: {
-  freelancer_username?: string;
-  freelancer_address?: string;
-}): Promise<{ ok: true; walletAddress: string; username: string | null } | { ok: false; error: string }> {
+async function resolveFreelancerArg(
+  params: {
+    freelancer_username?: string;
+    freelancer_address?: string;
+  },
+  store: JsonStore
+): Promise<{ ok: true; walletAddress: string; username: string | null } | { ok: false; error: string }> {
   const raw = params.freelancer_username?.trim() || params.freelancer_address?.trim() || "";
   if (!raw) {
     return {
@@ -62,7 +65,7 @@ async function resolveFreelancerArg(params: {
       error: "Provide freelancer_username (e.g. samuel) or freelancer_address.",
     };
   }
-  return resolveFreelancerInput(raw);
+  return resolveFreelancerInput(raw, store);
 }
 
 /* ------------------------------------------------------------------ */
@@ -127,23 +130,23 @@ export async function executeCreateDealDraft(
     freelancer_address?: string;
     total_amount: number;
     currency?: string;
-    milestones: Array<{ amount: number; description: string }>;
+    milestones?: Array<{ amount: number; description: string }>;
   }
 ): Promise<string> {
   const key = storeKey(chatId);
 
-  const resolved = await resolveFreelancerArg(params);
+  const resolved = await resolveFreelancerArg(params, store);
   if (!resolved.ok) return `❌ ${resolved.error}`;
   if (!params.total_amount || params.total_amount <= 0) {
     return "❌ Total amount must be positive.";
   }
-  if (!params.milestones || params.milestones.length === 0) {
-    return "❌ At least one milestone is required.";
-  }
 
   const fee = params.total_amount * 0.02;
   const net = params.total_amount - fee;
-  const milestonesSum = params.milestones.reduce((s, m) => s + m.amount, 0);
+  const milestones =
+    params.milestones && params.milestones.length > 0
+      ? params.milestones
+      : [{ amount: Math.round(net * 100) / 100, description: "Full delivery" }];
 
   const draft: DealDraft = {
     id: randomId("deal"),
@@ -154,16 +157,17 @@ export async function executeCreateDealDraft(
     totalAmount: Math.round(params.total_amount * 100) / 100,
     freelancerAddress: resolved.walletAddress,
     freelancerUsername: resolved.username ?? undefined,
-    milestones: params.milestones.map((m) => ({
+    milestones: milestones.map((m) => ({
       amount: Math.round(m.amount * 100) / 100,
       description: m.description,
     })),
-    desiredMilestonesCount: params.milestones.length,
+    desiredMilestonesCount: milestones.length,
   };
 
   const state: DealCopilotState = { stage: "review", draft };
   await store.setJSON(key, state, getDealTtlSeconds());
 
+  const milestonesSum = milestones.reduce((s, m) => s + m.amount, 0);
   const match = Math.abs(milestonesSum - net) < 0.01;
   const lines = [
     `📋 **Deal Draft Created!**`,
@@ -244,7 +248,7 @@ export async function executeEditDeal(
       break;
     }
     case "address": {
-      const resolved = await resolveFreelancerInput(params.value);
+      const resolved = await resolveFreelancerInput(params.value, store);
       if (!resolved.ok) return `❌ ${resolved.error}`;
       draft.freelancerAddress = resolved.walletAddress;
       draft.freelancerUsername = resolved.username ?? undefined;

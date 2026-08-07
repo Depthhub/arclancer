@@ -162,7 +162,7 @@ export class ArcLancerService {
           return { content: JSON.stringify(filtered, null, 2), structured: filtered };
         }
         case "lookup_profile": {
-          const resolved = await resolveFreelancerInput(String(args.username ?? ""));
+          const resolved = await resolveFreelancerInput(String(args.username ?? ""), this.store);
           if (!resolved.ok) {
             return { content: resolved.error, isError: true };
           }

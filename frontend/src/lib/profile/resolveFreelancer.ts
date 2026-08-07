@@ -1,12 +1,16 @@
 import { normalizeUsername, isEthAddress } from './username';
 import { isUserProfile, usernameKey } from './storeKeys';
 import { getJsonStore } from '@/lib/dealCopilot/storage';
+import type { JsonStore } from '@/lib/dealCopilot/storage';
 
 export type FreelancerResolveResult =
   | { ok: true; walletAddress: string; username: string | null }
   | { ok: false; error: string };
 
-export async function resolveFreelancerInput(raw: string): Promise<FreelancerResolveResult> {
+export async function resolveFreelancerInput(
+  raw: string,
+  store?: JsonStore
+): Promise<FreelancerResolveResult> {
   const trimmed = raw.trim();
   if (isEthAddress(trimmed)) {
     return { ok: true, walletAddress: trimmed, username: null };
@@ -20,8 +24,8 @@ export async function resolveFreelancerInput(raw: string): Promise<FreelancerRes
     };
   }
 
-  const store = getJsonStore();
-  const profile = await store.getJSON(usernameKey(username));
+  const profileStore = store ?? getJsonStore();
+  const profile = await profileStore.getJSON(usernameKey(username));
   if (!isUserProfile(profile)) {
     return {
       ok: false,

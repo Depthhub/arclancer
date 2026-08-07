@@ -35,27 +35,40 @@ export function createArcLancerMcpServer(user: UserContext, store: JsonStore): M
         inputSchema: jsonSchemaToZodShape(tool.inputSchema as Record<string, unknown>),
       },
       async (args: Record<string, unknown>) => {
-        if (user.scopes && !user.scopes.includes("arclancer:read")) {
+        try {
+          if (user.scopes && !user.scopes.includes("arclancer:read")) {
+            return {
+              content: [{ type: "text" as const, text: "OAuth scope arclancer:read is required." }],
+              isError: true,
+            };
+          }
+          if (
+            user.scopes &&
+            WRITE_TOOLS.has(tool.name) &&
+            !user.scopes.includes("arclancer:write")
+          ) {
+            return {
+              content: [{ type: "text" as const, text: "OAuth scope arclancer:write is required." }],
+              isError: true,
+            };
+          }
+          const result = await service.callTool(tool.name, args ?? {});
           return {
-            content: [{ type: "text" as const, text: "OAuth scope arclancer:read is required." }],
+            content: [{ type: "text" as const, text: result.content }],
+            isError: result.isError,
+          };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Tool call failed";
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `ArcLancer tool error (${tool.name}): ${message}`,
+              },
+            ],
             isError: true,
           };
         }
-        if (
-          user.scopes &&
-          WRITE_TOOLS.has(tool.name) &&
-          !user.scopes.includes("arclancer:write")
-        ) {
-          return {
-            content: [{ type: "text" as const, text: "OAuth scope arclancer:write is required." }],
-            isError: true,
-          };
-        }
-        const result = await service.callTool(tool.name, args ?? {});
-        return {
-          content: [{ type: "text" as const, text: result.content }],
-          isError: result.isError,
-        };
       }
     );
   }

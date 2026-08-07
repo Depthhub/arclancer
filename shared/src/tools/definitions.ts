@@ -50,7 +50,7 @@ const PHASE1_TOOLS: McpToolDefinition[] = [
           },
         },
       },
-      required: ["total_amount", "milestones"],
+      required: ["total_amount"],
     },
   },
   {
@@ -253,6 +253,7 @@ const PHASE2_TOOLS: McpToolDefinition[] = [
           },
         },
       },
+      required: ["total_amount"],
     },
   },
   {
@@ -492,14 +493,11 @@ export const ALL_MCP_TOOLS: McpToolDefinition[] = [
 ];
 
 export const WRITE_TOOLS = new Set([
-  "create_deal_draft",
-  "edit_deal",
   "request_confirmation",
   "register_agent_identity",
   "create_agentic_job",
   "create_job",
   "publish_job",
-  "hire",
   "create_escrow",
   "fund_escrow",
   "submit_work",
