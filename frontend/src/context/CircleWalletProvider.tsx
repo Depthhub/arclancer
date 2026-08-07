@@ -53,7 +53,7 @@ type CircleWalletContextValue = {
   executeChallenge: (challengeId: string) => Promise<void>;
   executeContract: (params: Omit<CircleContractExecutionParams, 'walletId'>) => Promise<string | undefined>;
   createConnectorToken: () => Promise<{ token: string; mcpUrl: string; walletAddress: string }>;
-  fundWallet: () => Promise<{
+  fundWallet: (options?: { openFaucetOnError?: boolean }) => Promise<{
     mode?: string;
     checkoutUrl?: string;
     fallbackUrl?: string;
@@ -585,8 +585,9 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
     return data as { token: string; mcpUrl: string; walletAddress: string };
   }, [session]);
 
-  const fundWallet = useCallback(async () => {
+  const fundWallet = useCallback(async (options?: { openFaucetOnError?: boolean }) => {
     if (!address) throw new Error('Sign in first');
+    const openFaucetOnError = options?.openFaucetOnError ?? true;
     setStatus('Adding test funds…');
     setStatusIsError(false);
     try {
@@ -603,7 +604,9 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
       const message = error instanceof Error ? error.message : 'Could not add test funds';
       setStatus(message);
       setStatusIsError(true);
-      window.open(CIRCLE_WEB_FAUCET_URL, '_blank', 'noopener,noreferrer');
+      if (openFaucetOnError) {
+        window.open(CIRCLE_WEB_FAUCET_URL, '_blank', 'noopener,noreferrer');
+      }
       throw error;
     }
   }, [address, refreshWallets]);

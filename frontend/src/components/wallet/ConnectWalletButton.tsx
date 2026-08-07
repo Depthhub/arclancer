@@ -24,23 +24,30 @@ function CircleConnectButton({
   const [funding, setFunding] = useState(false);
 
   const requestFunds = async () => {
+    if (!address) return;
     setFunding(true);
     try {
-      const result = await circle.fundWallet();
-      if (result.checkoutUrl) {
-        toast.success('Open Circle checkout to add funds');
-      } else if (result.fallbackUrl) {
-        toast(
-          `Paste your wallet address on faucet.circle.com (Arc Testnet). Address: ${address}`,
-          { duration: 8000 }
-        );
-      } else {
-        toast.success('Test USDC requested — balance updates in a few seconds');
+      try {
+        await navigator.clipboard.writeText(address);
+        toast.success('Wallet address copied — paste it on faucet.circle.com (Arc Testnet)', {
+          duration: 7000,
+        });
+      } catch {
+        toast(`Copy your wallet address: ${address}`, { duration: 10000 });
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not add funds';
-      toast.error(message, { duration: 8000 });
+
       window.open(CIRCLE_WEB_FAUCET_URL, '_blank', 'noopener,noreferrer');
+
+      try {
+        const result = await circle.fundWallet({ openFaucetOnError: false });
+        if (result.checkoutUrl) {
+          toast.success('Circle checkout opened');
+        } else if (result.mode === 'faucet' || result.status === 'requested') {
+          toast.success('Test USDC requested — balance updates in a few seconds');
+        }
+      } catch {
+        // Faucet tab is already open and address is on the clipboard.
+      }
     } finally {
       setFunding(false);
     }
@@ -67,7 +74,7 @@ function CircleConnectButton({
           onClick={() => void requestFunds()}
           disabled={funding}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60"
-          title="Add test funds"
+          title="Copy wallet address and open test USDC faucet"
         >
           <Droplets className="w-4 h-4" />
           {funding ? 'Adding…' : 'Add funds'}
