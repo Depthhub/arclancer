@@ -6,7 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useUserContracts } from '@/hooks/useContracts';
+import { useUserContracts, useAllContractDetails } from '@/hooks/useContracts';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useApprovedMilestones } from '@/hooks/useApprovedMilestones';
 import { usePendingActions } from '@/hooks/usePendingActions';
@@ -32,10 +32,11 @@ export default function DashboardPage() {
     const { address, isConnected } = useWallet();
 
     // Fetch contracts first (single source of truth)
-    const { contracts, isLoading: contractsLoading, refetch } = useUserContracts();
+    const { contracts, isLoading: contractsLoading, refetch, error: contractsError } = useUserContracts();
+    const { contracts: contractDetails, isLoading: detailsLoading } = useAllContractDetails();
 
     // Fetch real contracts and stats from blockchain
-    const { stats, debugInfo, contractsData, isLoading: dashboardLoading } = useDashboardData();
+    const { stats, debugInfo, isLoading: dashboardLoading } = useDashboardData();
 
     // Fetch approved milestones for withdraw
     const { approvedMilestones, totalAvailable, isLoading: milestonesLoading } = useApprovedMilestones();
@@ -59,9 +60,9 @@ export default function DashboardPage() {
                         <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-6">
                             <Wallet className="w-10 h-10 text-blue-600" />
                         </div>
-                        <h2 className="text-2xl font-bold text-neutral-900 mb-3">Connect Your Wallet</h2>
+                        <h2 className="text-2xl font-bold text-neutral-900 mb-3">Sign in to continue</h2>
                         <p className="text-neutral-500 mb-6">
-                            Sign in with email to get a Circle wallet on Arc Testnet — no MetaMask required.
+                            Sign in with your email to view contracts and manage payments.
                         </p>
                         <ConnectWalletButton />
                     </div>
@@ -71,14 +72,21 @@ export default function DashboardPage() {
     }
 
 
-    // Real active contracts from blockchain
-    const activeContracts: ActiveContract[] = (contracts || []).map((contractAddr, idx) => ({
-        id: contractAddr,
-        title: `Contract ${idx + 1}`,
-        client: contractAddr.slice(0, 6) + '...' + contractAddr.slice(-4),
-        status: ContractStatus.ACTIVE,
-        funded: undefined, // Will be fetched by individual contract cards
-    }));
+    const isStatsLoading = contractsLoading || dashboardLoading || detailsLoading;
+
+    // Active contracts with real on-chain status
+    const activeContracts: ActiveContract[] = (contractDetails || [])
+        .filter((c) => c.status === ContractStatus.ACTIVE)
+        .map((c, idx) => ({
+            id: c.address,
+            title: `Escrow ${c.address.slice(0, 6)}…${c.address.slice(-4)}`,
+            client: c.client,
+            status: ContractStatus.ACTIVE,
+            funded: Number(c.totalPaid) / 1e6,
+            needsAction:
+                (c.client.toLowerCase() === address?.toLowerCase() && !c.funded) ||
+                pendingActions.some((a) => a.contractId === c.address),
+        }));
 
     // Demo milestone details for drawer
     const demoMilestoneDetails: MilestoneDetails = {
@@ -138,7 +146,11 @@ export default function DashboardPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-neutral-900 mb-1 tracking-tight">Dashboard</h1>
                         <p className="text-neutral-500">
-                            {dashboardLoading ? 'Loading contracts...' : `${stats.totalContracts} contract${stats.totalContracts === 1 ? '' : 's'} found`}
+                            {isStatsLoading
+                              ? 'Loading contracts from Arc Testnet…'
+                              : contractsError
+                                ? 'Could not load contracts from chain'
+                                : `${stats.totalContracts} contract${stats.totalContracts === 1 ? '' : 's'} found`}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -172,10 +184,17 @@ export default function DashboardPage() {
                         {/* Escrow Overview Card */}
                         <EscrowOverviewCard
                             activeContracts={stats.activeContracts}
-                            pendingActions={stats.pendingActions}
+                            pendingActions={pendingActions.length || stats.pendingActions}
                             inEscrow={stats.inEscrow}
-                            available={stats.available}
+                            available={totalAvailable > 0 ? totalAvailable : stats.available}
                             avgPayoutDays={stats.avgPayoutDays}
+                            dailyValues={stats.dailyValues}
+                            isLoading={isStatsLoading}
+                            emptyMessage={
+                              stats.totalContracts === 0 && !isStatsLoading
+                                ? 'No escrow contracts yet for this wallet. Create one or sign in with the wallet that created or was hired on the deal.'
+                                : undefined
+                            }
                         />
 
                         {/* Bottom Row: Pending Actions + Payments */}
@@ -185,7 +204,7 @@ export default function DashboardPage() {
                                 onActionClick={handleActionClick}
                             />
                             <PaymentsWithdrawCard
-                                available={stats.available}
+                                available={totalAvailable > 0 ? totalAvailable : stats.available}
                                 recentPayout={stats.recentPayout}
                                 feePercentage={2} // Platform fee is 2%
                                 onWithdraw={handleWithdraw}

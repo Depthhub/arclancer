@@ -10,6 +10,7 @@ import React, {
   useState,
 } from 'react';
 import type { W3SSdk } from '@circle-fin/w3s-pw-web-sdk';
+import type { LoginCompleteCallback } from '@circle-fin/w3s-pw-web-sdk/dist/src/types';
 import { CIRCLE_WEB_FAUCET_URL } from '@/lib/circle/faucet';
 import type {
   CircleContractExecutionParams,
@@ -55,6 +56,7 @@ type CircleWalletContextValue = {
   createConnectorToken: () => Promise<{ token: string; mcpUrl: string; walletAddress: string }>;
   fundWallet: (options?: { openFaucetOnError?: boolean }) => Promise<{
     mode?: string;
+    status?: string;
     checkoutUrl?: string;
     fallbackUrl?: string;
     walletAddress?: string;

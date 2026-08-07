@@ -10,7 +10,7 @@ export function useWallet() {
   const wagmi = useAccount();
   const circleMode = isCircleWalletsEnabled() && circle.enabled;
 
-  if (circleMode) {
+  if (circleMode && circle.isConnected) {
     return {
       mode: 'circle' as const,
       address: circle.address,

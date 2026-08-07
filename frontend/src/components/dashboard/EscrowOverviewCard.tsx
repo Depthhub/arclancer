@@ -10,9 +10,11 @@ interface EscrowOverviewCardProps {
     pendingActions: number;
     inEscrow: number;
     available: number;
-    avgPayoutDays: number;
+    avgPayoutDays: number | null;
     /** Per-day dollar values for S M T W T F S (7 entries). Defaults to all zeros. */
     dailyValues?: number[];
+    isLoading?: boolean;
+    emptyMessage?: string;
 }
 
 export function EscrowOverviewCard({
@@ -20,8 +22,10 @@ export function EscrowOverviewCard({
     pendingActions = 0,
     inEscrow = 0,
     available = 0,
-    avgPayoutDays = 2.4,
+    avgPayoutDays = null,
     dailyValues,
+    isLoading = false,
+    emptyMessage,
 }: EscrowOverviewCardProps) {
     const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
     const todayIndex = new Date().getDay(); // 0 = Sun … 6 = Sat
@@ -73,7 +77,9 @@ export function EscrowOverviewCard({
                     <div>
                         <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">Escrow Overview</h2>
                         <p className="text-neutral-500 text-sm mt-1 max-w-sm leading-relaxed">
-                            Track locked funds, pending releases, and availability.
+                            {isLoading
+                              ? 'Loading on-chain escrow data…'
+                              : emptyMessage ?? 'Track locked funds, pending releases, and availability.'}
                         </p>
                     </div>
                 </div>
@@ -105,7 +111,14 @@ export function EscrowOverviewCard({
                         )}
                     </div>
                     <p className="text-neutral-500 text-xs mt-3 leading-relaxed font-medium">
-                        Avg. payout time: <span className="text-neutral-900 font-semibold">{avgPayoutDays} days</span>
+                        {avgPayoutDays != null ? (
+                          <>
+                            Avg. payout time:{' '}
+                            <span className="text-neutral-900 font-semibold">{avgPayoutDays} days</span>
+                          </>
+                        ) : (
+                          <span className="text-neutral-400">Payout time appears after your first release</span>
+                        )}
                     </p>
                 </div>
 
