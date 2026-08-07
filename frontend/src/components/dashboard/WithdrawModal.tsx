@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { waitForTransactionReceipt } from 'wagmi/actions';
 import { useWallet } from '@/hooks/useWallet';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ESCROW_ABI, CONTRACTS } from '@/lib/contracts';
+import { wagmiConfig } from '@/lib/wagmi';
 import { formatUSDC } from '@/lib/utils';
 import { X, CheckCircle, AlertCircle, Loader2, ChevronDown, ArrowRight } from 'lucide-react';
 import { Icon } from '@iconify/react';
@@ -55,16 +57,23 @@ interface WithdrawModalProps {
 }
 
 export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsdcClick }: WithdrawModalProps) {
-    const { address } = useWallet();
+    const { address, mode, executeContract } = useWallet();
     const [selectedMilestones, setSelectedMilestones] = useState<Set<string>>(new Set());
     const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
     const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
     const [currentTxIndex, setCurrentTxIndex] = useState<number>(-1);
     const [completedTxs, setCompletedTxs] = useState<Set<string>>(new Set());
     const [failedTxs, setFailedTxs] = useState<Set<string>>(new Set());
+    const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
-    const { writeContract, data: hash, isPending, error } = useWriteContract();
+    const { writeContractAsync, data: hash, isPending, error: wagmiError } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+    const isCircleMode = mode === 'circle' && executeContract;
+    const displayError =
+        isCircleMode && withdrawError
+            ? withdrawError
+            : wagmiError?.message || null;
 
     // Toast notifications for withdrawal transactions
     useTransactionToast({
@@ -72,7 +81,7 @@ export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsd
         isPending,
         isConfirming,
         isSuccess,
-        error,
+        error: isCircleMode ? null : wagmiError,
         actionLabel: 'Withdraw Payment',
     });
 
@@ -107,67 +116,98 @@ export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsd
     const convertedAmount = totalSelectedUSDC * selectedCurrency.rate / 1e6;
 
     const handleWithdraw = async () => {
-        const selected = Array.from(selectedMilestones).map(key => {
-            const index = parseInt(key.split('-')[1]);
-            return approvedMilestones[index];
-        });
+        setWithdrawError(null);
+        const selectedKeys = Array.from(selectedMilestones);
 
-        // Group milestones by contract address to batch operations
-        const contractGroups = new Map<string, typeof selected>();
-        for (const milestone of selected) {
+        const contractGroups = new Map<string, ApprovedMilestone[]>();
+        for (const key of selectedKeys) {
+            const listIndex = parseInt(key.split('-').pop() ?? '-1', 10);
+            const milestone = approvedMilestones[listIndex];
+            if (!milestone) continue;
             const existing = contractGroups.get(milestone.contractAddress) || [];
             existing.push(milestone);
             contractGroups.set(milestone.contractAddress, existing);
         }
 
-        let txIndex = 0;
+        const payoutCurrencySet = new Set<string>();
 
-        // Process each contract
         for (const [contractAddress, milestones] of contractGroups) {
             try {
-                // Step 1: Set payout currency if not USDC
-                if (selectedCurrency.symbol !== 'USDC') {
-                    setCurrentTxIndex(txIndex);
-                    console.log(`Setting payout currency to ${selectedCurrency.symbol} for contract ${contractAddress}`);
-
-                    await writeContract({
-                        address: contractAddress as `0x${string}`,
-                        abi: ESCROW_ABI,
-                        functionName: 'setPayoutCurrency',
-                        args: [selectedCurrency.address as `0x${string}`],
-                    });
-
-                    // Small delay to allow state to update
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                if (selectedCurrency.symbol !== 'USDC' && !payoutCurrencySet.has(contractAddress)) {
+                    if (isCircleMode) {
+                        await executeContract!({
+                            contractAddress,
+                            abiFunctionSignature: 'setPayoutCurrency(address)',
+                            abiParameters: [selectedCurrency.address],
+                        });
+                    } else {
+                        const payoutHash = await writeContractAsync({
+                            address: contractAddress as `0x${string}`,
+                            abi: ESCROW_ABI,
+                            functionName: 'setPayoutCurrency',
+                            args: [selectedCurrency.address as `0x${string}`],
+                        });
+                        await waitForTransactionReceipt(wagmiConfig, { hash: payoutHash });
+                    }
+                    payoutCurrencySet.add(contractAddress);
                 }
 
-                // Step 2: Release payment for each milestone in this contract
                 for (const milestone of milestones) {
-                    setCurrentTxIndex(txIndex);
+                    const listIndex = approvedMilestones.findIndex(
+                        (m) =>
+                            m.contractAddress === milestone.contractAddress &&
+                            m.milestoneIndex === milestone.milestoneIndex
+                    );
+                    const key =
+                        listIndex >= 0
+                            ? `${milestone.contractAddress}-${listIndex}`
+                            : `${milestone.contractAddress}-${milestone.milestoneIndex}`;
 
-                    console.log(`Releasing payment for milestone ${milestone.milestoneIndex} on contract ${contractAddress}`);
+                    setCurrentTxIndex(listIndex >= 0 ? listIndex : milestone.milestoneIndex);
 
-                    await writeContract({
-                        address: contractAddress as `0x${string}`,
-                        abi: ESCROW_ABI,
-                        functionName: 'releaseMilestonePayment',
-                        args: [BigInt(milestone.milestoneIndex)],
-                    });
+                    if (isCircleMode) {
+                        await executeContract!({
+                            contractAddress,
+                            abiFunctionSignature: 'releaseMilestonePayment(uint256)',
+                            abiParameters: [String(milestone.milestoneIndex)],
+                        });
+                    } else {
+                        const releaseHash = await writeContractAsync({
+                            address: contractAddress as `0x${string}`,
+                            abi: ESCROW_ABI,
+                            functionName: 'releaseMilestonePayment',
+                            args: [BigInt(milestone.milestoneIndex)],
+                        });
+                        await waitForTransactionReceipt(wagmiConfig, { hash: releaseHash });
+                    }
 
-                    setCompletedTxs(prev => new Set([...prev, `${contractAddress}-${txIndex}`]));
-                    txIndex++;
+                    setCompletedTxs((prev) => new Set([...prev, key]));
                 }
             } catch (err) {
                 console.error('Failed to process payment:', err);
-                setFailedTxs(prev => new Set([...prev, `${contractAddress}-${txIndex}`]));
-                txIndex++;
+                const message = err instanceof Error ? err.message : 'Transaction failed';
+                setWithdrawError(message);
+                for (const milestone of milestones) {
+                    const listIndex = approvedMilestones.findIndex(
+                        (m) =>
+                            m.contractAddress === milestone.contractAddress &&
+                            m.milestoneIndex === milestone.milestoneIndex
+                    );
+                    const key =
+                        listIndex >= 0
+                            ? `${milestone.contractAddress}-${listIndex}`
+                            : `${milestone.contractAddress}-${milestone.milestoneIndex}`;
+                    setFailedTxs((prev) => new Set([...prev, key]));
+                }
+                setCurrentTxIndex(-1);
+                return;
             }
         }
 
         setCurrentTxIndex(-1);
     };
 
-    const isProcessing = currentTxIndex >= 0;
+    const isProcessing = currentTxIndex >= 0 || (isPending || isConfirming);
     const allCompleted = completedTxs.size === selectedMilestones.size && selectedMilestones.size > 0;
 
     return (
@@ -388,11 +428,11 @@ export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsd
                             </div>
                         </div>
 
-                        {error && (
+                        {displayError && (
                             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100">
                                 <p className="text-sm text-red-600">
                                     <AlertCircle className="w-4 h-4 inline mr-1" />
-                                    {error.message || 'Transaction failed'}
+                                    {displayError}
                                 </p>
                             </div>
                         )}

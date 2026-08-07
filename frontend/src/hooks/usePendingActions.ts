@@ -100,6 +100,7 @@ export function usePendingActions() {
                                     subtitle: m.description?.slice(0, 40) || `Milestone ${i + 1}`,
                                     urgency: 'normal',
                                     contractId: addr,
+                                    milestoneIndex: i,
                                 });
                                 break; // Only prompt for the next un-submitted one
                             }
@@ -113,6 +114,7 @@ export function usePendingActions() {
                                     subtitle: m.description?.slice(0, 40) || `Milestone ${i + 1}`,
                                     urgency: 'high',
                                     contractId: addr,
+                                    milestoneIndex: i,
                                 });
                             }
 
@@ -125,6 +127,7 @@ export function usePendingActions() {
                                     subtitle: `${(Number(m.amount) / 1e6).toFixed(2)} USDC available`,
                                     urgency: 'normal',
                                     contractId: addr,
+                                    milestoneIndex: i,
                                 });
                             }
                         }

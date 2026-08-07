@@ -40,6 +40,7 @@ interface MilestoneDetailsDrawerProps {
     onRequestChanges?: () => void;
     onOpenDispute?: () => void;
     isClient?: boolean;
+    isActionPending?: boolean;
 }
 
 export function MilestoneDetailsDrawer({
@@ -50,6 +51,7 @@ export function MilestoneDetailsDrawer({
     onRequestChanges,
     onOpenDispute,
     isClient = true,
+    isActionPending = false,
 }: MilestoneDetailsDrawerProps) {
     if (!milestone) return null;
 
@@ -246,16 +248,26 @@ export function MilestoneDetailsDrawer({
                 <div className="p-6 border-t border-neutral-100 bg-white space-y-3">
                     {isClient && milestone.status === 'in_review' && (
                         <>
-                            <Button onClick={onApprove} className="w-full rounded-full">
-                                Approve Release
+                            <Button
+                                onClick={onApprove}
+                                disabled={isActionPending}
+                                className="w-full rounded-full"
+                            >
+                                {isActionPending ? 'Confirm in wallet…' : 'Approve Release'}
                             </Button>
                             <div className="grid grid-cols-2 gap-3">
-                                <Button variant="outline" onClick={onRequestChanges} className="rounded-full text-xs">
+                                <Button
+                                    variant="outline"
+                                    onClick={onRequestChanges}
+                                    disabled={isActionPending}
+                                    className="rounded-full text-xs"
+                                >
                                     Request Changes
                                 </Button>
                                 <button
                                     onClick={onOpenDispute}
-                                    className="py-3 rounded-full border border-red-100 text-red-500 text-xs font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-1"
+                                    disabled={isActionPending}
+                                    className="py-3 rounded-full border border-red-100 text-red-500 text-xs font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-1 disabled:opacity-50"
                                 >
                                     <Icon icon="solar:danger-triangle-linear" />
                                     Open Dispute

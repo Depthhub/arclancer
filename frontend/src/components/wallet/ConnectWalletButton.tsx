@@ -70,49 +70,47 @@ function CircleConnectButton({
 
   if (isConnected && address) {
     const shortAddress = `${address.slice(0, 6)}…${address.slice(-4)}`;
+    const displayName = circle.username ? formatUsername(circle.username) : shortAddress;
 
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 flex-nowrap shrink-0">
         <button
           type="button"
           onClick={() => void copyAddress('pill')}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-neutral-100 border border-neutral-200/60 text-sm hover:bg-neutral-50 transition-colors"
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200/60 text-sm hover:bg-neutral-50 transition-colors whitespace-nowrap shrink-0"
           title={`Copy wallet address: ${address}`}
         >
-          <div className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="font-medium text-neutral-800">
-            {circle.username ? formatUsername(circle.username) : shortAddress}
+          <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+          <span className="font-medium text-neutral-800 truncate max-w-[120px]">
+            {displayName}
           </span>
-          {circle.username && (
-            <span className="text-neutral-400 text-xs">{shortAddress}</span>
-          )}
           {showBalance && usdcBalance != null && (
-            <span className="text-neutral-500">${Number(usdcBalance).toFixed(2)}</span>
+            <span className="text-neutral-500 shrink-0">${Number(usdcBalance).toFixed(2)}</span>
           )}
         </button>
         <button
           type="button"
           onClick={() => void copyAddress('button')}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
-          title={`Copy ${address}`}
+          className="inline-flex items-center justify-center w-8 h-8 rounded-full text-neutral-600 bg-neutral-100 hover:bg-neutral-200 shrink-0"
+          title={copied ? 'Copied!' : `Copy address ${shortAddress}`}
+          aria-label="Copy wallet address"
         >
           <Copy className="w-4 h-4" />
-          {copied ? 'Copied' : 'Copy address'}
         </button>
         <button
           type="button"
           onClick={() => void requestFunds()}
           disabled={funding}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 shrink-0"
           title="Copy address and open test USDC faucet"
         >
-          <Droplets className="w-4 h-4" />
-          {funding ? 'Opening…' : 'Add funds'}
+          <Droplets className="w-4 h-4 shrink-0" />
+          <span className="hidden xl:inline">{funding ? 'Opening…' : 'Add funds'}</span>
         </button>
         <button
           type="button"
           onClick={disconnect}
-          className="p-2 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 shrink-0"
           title="Sign out"
         >
           <LogOut className="w-4 h-4" />

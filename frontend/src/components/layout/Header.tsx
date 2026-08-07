@@ -52,8 +52,8 @@ export function Header() {
                 </div>
 
                 {/* Right Side */}
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:block">
+                <div className="flex items-center gap-2 shrink-0 min-w-0">
+                    <div className="hidden sm:block shrink-0">
                         <ConnectWalletButton
                             showBalance={false}
                             chainStatus="icon"

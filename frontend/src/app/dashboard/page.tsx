@@ -17,14 +17,13 @@ import {
     PaymentsWithdrawCard,
     ActiveContractsList,
     ResolutionCenterCard,
-    MilestoneDetailsDrawer,
+    MilestoneDrawerContainer,
     WithdrawModal,
 } from '@/components/dashboard';
 import { BridgeUsdcModal } from '@/components/cctp/BridgeUsdcModal';
 import { isCctpUiEnabled } from '@/lib/cctp/featureFlag';
 import { isAgentsUiEnabled } from '@/lib/agents/featureFlag';
 import type { PendingAction, ActiveContract } from '@/components/dashboard';
-import type { MilestoneDetails } from '@/components/dashboard/MilestoneDetailsDrawer';
 import { Plus, Wallet } from 'lucide-react';
 import { Icon } from '@iconify/react';
 
@@ -46,7 +45,8 @@ export default function DashboardPage() {
 
     // Drawer state
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [selectedMilestone, setSelectedMilestone] = useState<MilestoneDetails | null>(null);
+    const [drawerContract, setDrawerContract] = useState<`0x${string}` | null>(null);
+    const [drawerMilestoneIndex, setDrawerMilestoneIndex] = useState<number | undefined>(undefined);
 
     // Withdraw modal state
     const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -88,49 +88,32 @@ export default function DashboardPage() {
                 pendingActions.some((a) => a.contractId === c.address),
         }));
 
-    // Demo milestone details for drawer
-    const demoMilestoneDetails: MilestoneDetails = {
-        contractId: '0x1234567890abcdef1234567890abcdef12345678',
-        contractTitle: 'DeFi Dashboard UI',
-        status: 'in_review',
-        milestoneIndex: 1,
-        totalMilestones: 4,
-        milestoneName: 'Frontend Implementation',
-        escrowBalance: 2500,
-        progressPercent: 75,
-        autoReleaseTime: '2d 4h',
-        acceptanceCriteria: [
-            { text: 'Connect Wallet Integration', completed: true },
-            { text: 'Swap Interface HTML/CSS', completed: true },
-            { text: 'Responsive Mobile View', completed: false },
-        ],
-        deliverables: [
-            {
-                name: 'Final_Design_v2.fig',
-                uploadedAt: '2h ago',
-                url: '#',
-            },
-        ],
-        deliverableNote:
-            "Hey, I've completed the swap interface and wallet connection. Please review the mobile responsiveness on the staging link provided.",
-        history: [
-            { event: 'Deliverable Submitted', timestamp: 'Today, 10:42 AM', isActive: true },
-            { event: 'Milestone Funded', timestamp: 'Apr 10, 2:00 PM', isActive: false },
-        ],
+    const openMilestoneDrawer = (contractId: string, milestoneIndex?: number) => {
+        setDrawerContract(contractId as `0x${string}`);
+        setDrawerMilestoneIndex(milestoneIndex);
+        setDrawerOpen(true);
     };
 
     const handleActionClick = (action: PendingAction) => {
-        // Navigate to the contract page
-        if (action.contractId) {
-            window.location.href = `/contract/${action.contractId}`;
+        if (!action.contractId) return;
+
+        if (action.type === 'review') {
+            openMilestoneDrawer(action.contractId, action.milestoneIndex);
+            return;
         }
+        if (action.type === 'approve') {
+            setWithdrawModalOpen(true);
+            return;
+        }
+        window.location.href = `/contract/${action.contractId}`;
     };
 
     const handleContractClick = (contract: ActiveContract) => {
-        if (contract.needsAction) {
-            setSelectedMilestone(demoMilestoneDetails);
-            setDrawerOpen(true);
-        }
+        openMilestoneDrawer(contract.id);
+    };
+
+    const handleDrawerComplete = () => {
+        refetch();
     };
 
     const handleWithdraw = () => {
@@ -280,22 +263,16 @@ export default function DashboardPage() {
             </div>
 
             {/* Milestone Details Drawer */}
-            <MilestoneDetailsDrawer
-                isOpen={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                milestone={selectedMilestone}
-                onApprove={() => {
-                    alert('Approving milestone...');
-                    setDrawerOpen(false);
-                }}
-                onRequestChanges={() => {
-                    alert('Requesting changes...');
-                }}
-                onOpenDispute={() => {
-                    alert('Opening dispute...');
-                }}
-                isClient={true}
-            />
+            {address && (
+                <MilestoneDrawerContainer
+                    isOpen={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    contractAddress={drawerContract}
+                    milestoneIndex={drawerMilestoneIndex}
+                    userAddress={address}
+                    onComplete={handleDrawerComplete}
+                />
+            )}
 
             {/* Withdraw Modal */}
             <WithdrawModal

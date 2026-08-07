@@ -13,6 +13,7 @@ export interface PendingAction {
     urgency?: 'high' | 'normal';
     dueIn?: string;
     contractId?: string;
+    milestoneIndex?: number;
 }
 
 interface PendingActionsCardProps {
