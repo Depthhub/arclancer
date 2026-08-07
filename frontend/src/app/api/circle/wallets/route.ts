@@ -186,22 +186,34 @@ export async function POST(request: Request) {
           contractAddress,
           abiFunctionSignature,
           abiParameters,
+          callData,
           feeLevel = 'MEDIUM',
         } = params;
-        if (!userToken || !walletId || !contractAddress || !abiFunctionSignature) {
+        if (!userToken || !walletId || !contractAddress) {
           return NextResponse.json({ error: 'Missing contract execution params' }, { status: 400 });
+        }
+        if (!callData && !abiFunctionSignature) {
+          return NextResponse.json(
+            { error: 'Missing abiFunctionSignature or callData' },
+            { status: 400 }
+          );
+        }
+        const body: Record<string, unknown> = {
+          idempotencyKey: crypto.randomUUID(),
+          walletId,
+          contractAddress,
+          feeLevel,
+        };
+        if (callData) {
+          body.callData = callData;
+        } else {
+          body.abiFunctionSignature = abiFunctionSignature;
+          body.abiParameters = abiParameters ?? [];
         }
         return circleFetch('/v1/w3s/user/transactions/contractExecution', {
           method: 'POST',
           headers: circleHeaders(userToken),
-          body: JSON.stringify({
-            idempotencyKey: crypto.randomUUID(),
-            walletId,
-            contractAddress,
-            abiFunctionSignature,
-            abiParameters: abiParameters ?? [],
-            fee: { type: 'level', config: { feeLevel } },
-          }),
+          body: JSON.stringify(body),
         });
       }
 

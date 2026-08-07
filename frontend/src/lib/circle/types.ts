@@ -13,7 +13,8 @@ export type CircleLoginSession = {
 export type CircleContractExecutionParams = {
   walletId: string;
   contractAddress: string;
-  abiFunctionSignature: string;
-  abiParameters: unknown[];
+  abiFunctionSignature?: string;
+  abiParameters?: unknown[];
+  callData?: string;
   feeLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
 };

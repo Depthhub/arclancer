@@ -17,6 +17,7 @@ import { formatDollars, parseUSDC } from '@/lib/utils';
 import { isEthAddress } from '@/lib/profile/username';
 import { getCurrencyAddress } from '@/hooks/useStableFX';
 import { useTransactionToast } from '@/hooks/useTransactionToast';
+import { encodeCreateEscrowContract } from '@/lib/circle/contractExecution';
 import {
     ChevronRight,
     ChevronLeft,
@@ -315,14 +316,12 @@ export default function CreateContractClient() {
                 setTxStep('creating');
                 await executeContract({
                     contractAddress: CONTRACTS.FACTORY,
-                    abiFunctionSignature:
-                        'createEscrowContract(address,uint256,address,(uint256,string)[])',
-                    abiParameters: [
+                    callData: encodeCreateEscrowContract(
                         freelancerAddress,
-                        parseUSDC(data.totalAmount).toString(),
+                        parseUSDC(data.totalAmount),
                         payoutCurrencyAddress,
-                        milestones.map((m) => [m.amount.toString(), m.description]),
-                    ],
+                        milestones
+                    ),
                 });
                 setTxStep('success');
             } catch (err) {
