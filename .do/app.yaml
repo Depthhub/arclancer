@@ -136,6 +136,9 @@ services:
       - key: MCP_INTERNAL_URL
         value: "http://mcp-server:3100"
         scope: RUN_TIME
+      - key: DEAL_COPILOT_SECRET
+        scope: RUN_TIME
+        type: SECRET
   - name: mcp-server
     github:
       repo: Depthhub/arclancer
@@ -192,6 +195,9 @@ services:
       - key: CREATOR_MCP_TICKET_TTL_SECONDS
         value: "300"
         scope: RUN_TIME
+      - key: DEAL_COPILOT_SECRET
+        scope: RUN_TIME
+        type: SECRET
 
 workers:
   - name: openclaw-worker

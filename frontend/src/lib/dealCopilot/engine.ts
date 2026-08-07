@@ -907,6 +907,7 @@ export function handleMessage(
 export function buildCreatePrefill(draft: DealDraft) {
   return {
     freelancerAddress: draft.freelancerAddress,
+    freelancerUsername: draft.freelancerUsername,
     totalAmount: String(draft.totalAmount || ""),
     payoutCurrency: draft.payoutCurrency,
     milestones: (draft.milestones || []).map((m) => ({

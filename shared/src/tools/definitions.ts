@@ -258,7 +258,8 @@ const PHASE2_TOOLS: McpToolDefinition[] = [
   },
   {
     name: "create_escrow",
-    description: "Deploy escrow contract from current deal draft (requires prior confirmation).",
+    description:
+      "Deploy escrow from the current deal draft. Circle wallet users get a signing link to arclancer.xyz/create; server-wallet users deploy on-chain via API.",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {

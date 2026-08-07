@@ -85,6 +85,9 @@ export default function CreateContractClient() {
                 if (!obj.ok || !obj.draft) return;
 
                 const d = obj.draft;
+                if (typeof d.freelancerUsername === 'string' && d.freelancerUsername.trim()) {
+                    setValue('freelancerUsername', d.freelancerUsername.replace(/^@+/, ''));
+                }
                 if (typeof d.freelancerAddress === 'string') {
                     if (isEthAddress(d.freelancerAddress)) {
                         setValue('freelancerAddress', d.freelancerAddress);

@@ -47,12 +47,12 @@ export function renderPrompt(
                 "",
                 "Steps:",
                 "1. search_registered_agents or recommend_agents",
-                "2. create_deal_draft with freelancer_username (e.g. samuel) and milestones (must sum to 98% of total)",
+                "2. create_deal_draft or hire with freelancer_username and total_amount (milestones optional; default one milestone at 98% net)",
                 "3. show_deal_summary",
-                "4. request_confirmation for deploy_contract",
-                "5. create_escrow then fund_escrow",
+                "4. create_escrow — returns a signing link for Circle wallet users; open it to Approve & Create Contract on arclancer.xyz",
+                "5. fund_escrow on the contract page after deploy",
                 "",
-                "Never execute on-chain writes without request_confirmation first.",
+                "For Circle-linked accounts, create_escrow does not deploy inside chat; it returns the create URL.",
               ]
                 .filter(Boolean)
                 .join("\n"),

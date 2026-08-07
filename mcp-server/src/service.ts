@@ -23,6 +23,7 @@ import type { DealCopilotState, DealDraft } from "../../frontend/src/lib/dealCop
 import { getDealTtlSeconds } from "../../frontend/src/lib/dealCopilot/engine.js";
 import { issueCreatorJobTicket } from "./creatorTickets.js";
 import { resolveFreelancerInput } from "../../frontend/src/lib/profile/resolveFreelancer.js";
+import { buildDraftCreateUrl } from "./draftLinks.js";
 
 function storeKey(sessionId: string) {
   return `dealCopilot:state:${sessionId}`;
@@ -202,6 +203,10 @@ export class ArcLancerService {
           };
         }
         case "create_escrow":
+          // Circle OAuth users sign on the website; Telegram/API-key users use server wallet + confirmation.
+          if (this.user.walletAddress) {
+            return this.deployFromDraft();
+          }
           return this.executeConfirmedWrite("deploy_contract", () => this.deployFromDraft());
         case "fund_escrow":
           return this.executeDirectWrite(async (pk) =>
@@ -420,13 +425,54 @@ export class ArcLancerService {
     if (!state?.draft?.freelancerAddress || !state.draft.totalAmount) {
       return { content: "No complete deal draft. Use create_deal_draft first.", isError: true };
     }
+
+    const draft = state.draft;
+    const freelancerLabel = draft.freelancerUsername
+      ? `@${draft.freelancerUsername}`
+      : draft.freelancerAddress;
+
+    // Linked Circle wallet (Claude OAuth): open prefilled create page — no server private key.
+    if (this.user.walletAddress) {
+      const createUrl = buildDraftCreateUrl(draft.id, this.user.sessionId);
+      if (!createUrl) {
+        return {
+          content:
+            "Could not build signing link. MCP server needs DEAL_COPILOT_SECRET (same as frontend) to issue draft tokens.",
+          isError: true,
+        };
+      }
+      if (state.draft.pendingAction) {
+        delete state.draft.pendingAction;
+        await this.store.setJSON(key, state, getDealTtlSeconds());
+      }
+      return {
+        content: [
+          "✅ **Ready to deploy on Arc Testnet**",
+          "",
+          `Freelancer: ${freelancerLabel}`,
+          `Total: $${draft.totalAmount} USDC (${draft.milestones.length} milestone${draft.milestones.length === 1 ? "" : "s"})`,
+          "",
+          "Open this link, review the form, then click **Approve & Create Contract** and confirm in your Circle wallet:",
+          createUrl,
+          "",
+          "You may need two Circle approvals: USDC allowance, then contract creation.",
+        ].join("\n"),
+        structured: {
+          mode: "web_sign",
+          createUrl,
+          walletAddress: this.user.walletAddress,
+          draftId: draft.id,
+        },
+      };
+    }
+
     if (!isWalletEnabled()) return { content: "Wallet not enabled", isError: true };
     const wallet = await getWallet(this.store as never, this.user.userId);
     if (!wallet) return { content: "No wallet. Call create_wallet first.", isError: true };
     const pk = getPrivateKey(wallet, this.user.userId) as `0x${string}`;
-    const result = await createEscrowContract(pk, state.draft);
+    const result = await createEscrowContract(pk, draft);
     if (result.success && result.contractAddress) {
-      state.draft.lastContractAddress = result.contractAddress;
+      draft.lastContractAddress = result.contractAddress;
       await this.store.setJSON(key, state, getDealTtlSeconds());
     }
     return {
