@@ -208,7 +208,10 @@ export function WithdrawModal({ isOpen, onClose, approvedMilestones, onBridgeUsd
     };
 
     const isProcessing = currentTxIndex >= 0 || (isPending || isConfirming);
-    const allCompleted = completedTxs.size === selectedMilestones.size && selectedMilestones.size > 0;
+    const allCompleted =
+        completedTxs.size === selectedMilestones.size &&
+        selectedMilestones.size > 0 &&
+        failedTxs.size === 0;
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
