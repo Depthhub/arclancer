@@ -141,7 +141,7 @@ export async function POST(request: Request) {
           });
         }
 
-        return circleFetch('/v1/faucet/drips', {
+        const faucetResponse = await fetch(`${CIRCLE_BASE_URL}/v1/faucet/drips`, {
           method: 'POST',
           headers: circleHeaders(),
           body: JSON.stringify({
@@ -150,6 +150,33 @@ export async function POST(request: Request) {
             usdc: true,
           }),
         });
+
+        if (faucetResponse.ok) {
+          return NextResponse.json({
+            mode: 'faucet',
+            status: 'requested',
+            walletAddress: address,
+            asset: 'USDC',
+          });
+        }
+
+        const faucetError = await faucetResponse.json().catch(() => ({}));
+        const circleMessage =
+          typeof faucetError?.message === 'string' ? faucetError.message : undefined;
+        const error =
+          faucetResponse.status === 403
+            ? 'Automatic test USDC is not enabled for this Circle API key. Open faucet.circle.com, select Arc Testnet, and paste your wallet address.'
+            : circleMessage || `Circle faucet request failed (${faucetResponse.status})`;
+
+        return NextResponse.json(
+          {
+            error,
+            code: typeof faucetError?.code === 'number' ? faucetError.code : undefined,
+            fallbackUrl: 'https://faucet.circle.com',
+            walletAddress: address,
+          },
+          { status: faucetResponse.status }
+        );
       }
 
       case 'createContractExecution': {

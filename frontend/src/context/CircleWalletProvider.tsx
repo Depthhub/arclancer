@@ -10,7 +10,7 @@ import React, {
   useState,
 } from 'react';
 import type { W3SSdk } from '@circle-fin/w3s-pw-web-sdk';
-import type { LoginCompleteCallback } from '@circle-fin/w3s-pw-web-sdk/dist/src/types';
+import { CIRCLE_WEB_FAUCET_URL } from '@/lib/circle/faucet';
 import type {
   CircleContractExecutionParams,
   CircleLoginSession,
@@ -53,7 +53,12 @@ type CircleWalletContextValue = {
   executeChallenge: (challengeId: string) => Promise<void>;
   executeContract: (params: Omit<CircleContractExecutionParams, 'walletId'>) => Promise<string | undefined>;
   createConnectorToken: () => Promise<{ token: string; mcpUrl: string; walletAddress: string }>;
-  fundWallet: () => Promise<{ mode?: string; checkoutUrl?: string }>;
+  fundWallet: () => Promise<{
+    mode?: string;
+    checkoutUrl?: string;
+    fallbackUrl?: string;
+    walletAddress?: string;
+  }>;
   resolveOAuthRequest: (requestId: string, approved: boolean) => Promise<string>;
 };
 
@@ -583,15 +588,24 @@ export function CircleWalletProvider({ children }: { children: React.ReactNode }
   const fundWallet = useCallback(async () => {
     if (!address) throw new Error('Sign in first');
     setStatus('Adding test funds…');
-    const result = await circleApi('fundWallet', { address });
-    if (result.checkoutUrl) {
-      window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer');
-      setStatus('Complete funding in the Circle checkout');
-    } else {
+    setStatusIsError(false);
+    try {
+      const result = await circleApi('fundWallet', { address });
+      if (result.checkoutUrl) {
+        window.open(result.checkoutUrl, '_blank', 'noopener,noreferrer');
+        setStatus('Complete funding in the Circle checkout');
+        return result as { mode?: string; checkoutUrl?: string };
+      }
       setStatus('Test funds requested. They may take a moment to arrive.');
       window.setTimeout(() => void refreshWallets(), 4000);
+      return result as { mode?: string };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not add test funds';
+      setStatus(message);
+      setStatusIsError(true);
+      window.open(CIRCLE_WEB_FAUCET_URL, '_blank', 'noopener,noreferrer');
+      throw error;
     }
-    return result as { mode?: string; checkoutUrl?: string };
   }, [address, refreshWallets]);
 
   const resolveOAuthRequest = useCallback(

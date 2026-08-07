@@ -9,6 +9,8 @@ import {
   isCircleWalletsEnabled,
   isCircleWalletsPreferred,
 } from '@/lib/circle/featureFlag';
+import toast from 'react-hot-toast';
+import { CIRCLE_WEB_FAUCET_URL } from '@/lib/circle/faucet';
 import { formatUsername } from '@/lib/profile/username';
 
 function CircleConnectButton({
@@ -24,7 +26,21 @@ function CircleConnectButton({
   const requestFunds = async () => {
     setFunding(true);
     try {
-      await circle.fundWallet();
+      const result = await circle.fundWallet();
+      if (result.checkoutUrl) {
+        toast.success('Open Circle checkout to add funds');
+      } else if (result.fallbackUrl) {
+        toast(
+          `Paste your wallet address on faucet.circle.com (Arc Testnet). Address: ${address}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success('Test USDC requested — balance updates in a few seconds');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not add funds';
+      toast.error(message, { duration: 8000 });
+      window.open(CIRCLE_WEB_FAUCET_URL, '_blank', 'noopener,noreferrer');
     } finally {
       setFunding(false);
     }

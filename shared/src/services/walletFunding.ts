@@ -55,9 +55,11 @@ export async function fundWallet(walletAddress: string): Promise<WalletFundingRe
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
     const message =
-      payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message: unknown }).message)
-        : `Circle faucet request failed (${response.status})`;
+      response.status === 403
+        ? "Automatic test USDC is not enabled for this Circle API key. Use https://faucet.circle.com (Arc Testnet)."
+        : payload && typeof payload === "object" && "message" in payload
+          ? String((payload as { message: unknown }).message)
+          : `Circle faucet request failed (${response.status})`;
     throw new Error(message);
   }
 
